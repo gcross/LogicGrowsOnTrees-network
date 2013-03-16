@@ -1,0 +1,57 @@
+Name:                Visitor-network
+Version:             1.0
+License:             BSD3
+License-file:        LICENSE
+Author:              Gregory Crosswhite
+Maintainer:          Gregory Crosswhite <gcrosswhite@gmail.com>
+Stability:           Provisional
+Synopsis:            
+Description:         
+Cabal-version:       >=1.8
+Build-type:          Simple
+Category:	     
+
+Source-Repository head
+  Type:                git
+  Location:            git://github.com/gcross/Visitor-network.git
+
+Source-Repository this
+    Type:                git
+    Location:            git://github.com/gcross/Visitor-network.git
+--    Tag:                 
+
+
+Library
+    Build-depends:
+        Visitor == 1.0.*,
+        base > 4 && < 5,
+        cereal >= 0.3.5 && < 0.3.6,
+        composition >= 1.0.1 && < 1.1,
+        containers == 0.4.*,
+        hslogger == 1.2.*,
+        hslogger-template == 2.0.*,
+        lens >= 3.8.5 && < 3.9,
+        MonadCatchIO-transformers == 0.3.*,
+        mtl >= 2.1.2 && < 2.2,
+        network == 2.3.*,
+        transformers == 0.3.*
+    Exposed-modules:
+        Control.Visitor.Parallel.BackEnd.Network
+
+Test-Suite tests
+    Type: exitcode-stdio-1.0
+    Main-is: tests.hs
+    Hs-source-dirs: tests
+    Build-depends:
+        Visitor-network,
+        Visitor == 1.0.*,
+        base > 4 && < 5,
+        hslogger == 1.2.*,
+        hslogger-template == 2.0.*,
+        HUnit >= 1.2 && < 1.3,
+        network == 2.3.*,
+        random == 1.0.*,
+        stm >= 2.4 && < 2.5,
+        test-framework== 0.8.*,
+        test-framework-hunit == 0.3.*,
+        transformers == 0.3.*
