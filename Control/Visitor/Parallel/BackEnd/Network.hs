@@ -65,7 +65,7 @@ import Text.Printf
 import Control.Visitor
 import Control.Visitor.Checkpoint
 import Control.Visitor.Parallel.Common.Message
-import Control.Visitor.Parallel.Common.Process (runWorkerUsingHandles)
+import qualified Control.Visitor.Parallel.Common.Process as Process
 import qualified Control.Visitor.Parallel.Common.Supervisor as Supervisor
 import Control.Visitor.Parallel.Common.Supervisor hiding (runSupervisor)
 import Control.Visitor.Parallel.Common.Supervisor.RequestQueue
@@ -312,6 +312,32 @@ runWorkerWithVisitorT :: -- {{{
 runWorkerWithVisitorT runInIO = genericRunWorker . flip (forkVisitorTWorkerThread runInIO)
 -- }}}
 
+runWorkerUsingHandleWithVisitor :: -- {{{
+    (Monoid result, Serialize result) ⇒
+    Visitor result →
+    Handle →
+    Network ()
+runWorkerUsingHandleWithVisitor = genericRunWorkerUsingHandle . flip forkVisitorWorkerThread
+-- }}}
+
+runWorkerUsingHandleWithVisitorIO :: -- {{{
+    (Monoid result, Serialize result) ⇒
+    VisitorIO result →
+    Handle →
+    Network ()
+runWorkerUsingHandleWithVisitorIO = genericRunWorkerUsingHandle . flip forkVisitorIOWorkerThread
+-- }}}
+
+runWorkerUsingHandleWithVisitorT :: -- {{{
+    (Monoid result, Serialize result, MonadIO m) ⇒
+    (∀ α. m α → IO α) →
+    VisitorT m result →
+    Handle →
+    Network ()
+runWorkerUsingHandleWithVisitorT runInIO = genericRunWorkerUsingHandle . flip (forkVisitorTWorkerThread runInIO)
+-- }}}
+
+
 showPortID :: PortID → String -- {{{
 showPortID (Service service_name) = "Service " ++ service_name
 showPortID (PortNumber port_number) = "Port Number " ++ show port_number
@@ -332,10 +358,23 @@ genericRunWorker :: -- {{{
     HostName →
     PortID →
     Network ()
-genericRunWorker spawnWorker host_name port_id = do
-    debugM "called genericRunWorker"
-    liftIO $ do
-        handle ← connectTo host_name port_id
-        runWorkerUsingHandles handle handle spawnWorker
+genericRunWorker spawnWorker host_name port_id =
+    liftIO (connectTo host_name port_id)
+    >>=
+    genericRunWorkerUsingHandle spawnWorker
 -- }}}
+
+genericRunWorkerUsingHandle :: -- {{{
+    (Monoid result, Serialize result) ⇒
+    (
+        (WorkerTerminationReason result → IO ()) →
+        Workload →
+        IO (WorkerEnvironment result)
+    ) →
+    Handle →
+    Network ()
+genericRunWorkerUsingHandle spawnWorker handle = liftIO $
+    Process.runWorkerUsingHandles handle handle spawnWorker
+-- }}}
+
 -- }}}

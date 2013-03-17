@@ -109,6 +109,7 @@ tests = -- {{{
         RunOutcome _ termination_reason ←
             unsafeRunNetwork $
             runSupervisor
+                (const $ return ())
                 NetworkCallbacks{..}
                 port_id
                 (forever $ requestProgressUpdate >>= (liftIO . modifyIORef progresses_ref . (:)) >> generateNoise changeNumberOfWorkers)
