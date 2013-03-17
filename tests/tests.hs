@@ -85,7 +85,7 @@ tests = -- {{{
                          .
                          forkIO
                          .
-                         unwrapNetwork
+                         unsafeRunNetwork
                          $
                          runWorkerWithVisitor
                             visitor
@@ -107,7 +107,7 @@ tests = -- {{{
                 return True
             notifyDisconnected _ = return ()
         RunOutcome _ termination_reason ←
-            unwrapNetwork $
+            unsafeRunNetwork $
             runSupervisor
                 NetworkCallbacks{..}
                 port_id

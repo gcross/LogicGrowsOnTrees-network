@@ -93,7 +93,7 @@ data WorkerId = WorkerId -- {{{
     } deriving (Eq,Ord,Show,Typeable)
 -- }}}
 
-newtype Network α = Network { unwrapNetwork :: IO α }
+newtype Network α = Network { unsafeRunNetwork :: IO α }
   deriving (Applicative,Functor,Monad,MonadIO)
 
 data NetworkCallbacks = NetworkCallbacks -- {{{
@@ -163,7 +163,7 @@ instance NetworkRequestQueueMonad (NetworkControllerMonad result) where -- {{{
 
 -- Exposed Functions {{{
 runNetwork :: Network α → IO α -- {{{
-runNetwork = withSocketsDo . unwrapNetwork
+runNetwork = withSocketsDo . unsafeRunNetwork
 -- }}}
 
 runSupervisor :: -- {{{
