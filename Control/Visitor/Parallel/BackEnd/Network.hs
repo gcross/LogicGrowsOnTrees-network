@@ -170,11 +170,13 @@ runSupervisor :: -- {{{
     ( Monoid result
     , Serialize result
     ) ⇒
+    (Handle → IO ()) →
     NetworkCallbacks →
     PortID →
     NetworkControllerMonad result () →
     Network (RunOutcome result)
-runSupervisor callbacks port_id = runSupervisorWithStartingProgress callbacks port_id mempty
+runSupervisor initializeWorker callbacks port_id =
+    runSupervisorWithStartingProgress initializeWorker callbacks port_id mempty
 -- }}}
 
 runSupervisorWithStartingProgress :: -- {{{
@@ -182,12 +184,13 @@ runSupervisorWithStartingProgress :: -- {{{
     ( Monoid result
     , Serialize result
     ) ⇒
+    (Handle → IO ()) →
     NetworkCallbacks →
     PortID →
     Progress result →
     NetworkControllerMonad result () →
     Network (RunOutcome result)
-runSupervisorWithStartingProgress NetworkCallbacks{..} port_id starting_progress (C controller) = liftIO $ do
+runSupervisorWithStartingProgress initializeWorker NetworkCallbacks{..} port_id starting_progress (C controller) = liftIO $ do
     request_queue ← newRequestQueue
     -- Message receivers {{{
     let receiveStolenWorkloadFromWorker = flip enqueueRequest request_queue .* receiveStolenWorkload
@@ -246,6 +249,7 @@ runSupervisorWithStartingProgress NetworkCallbacks{..} port_id starting_progress
                     if allowed_to_connect
                         then 
                          do debugM $ identifier ++ " is allowed to connect."
+                            initializeWorker workerHandle
                             workerThreadId ← forkIO (
                                 receiveAndProcessMessagesFromWorkerUsingHandle
                                     MessageForSupervisorReceivers{..}
