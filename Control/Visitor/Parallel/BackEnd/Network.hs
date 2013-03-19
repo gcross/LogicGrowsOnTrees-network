@@ -18,13 +18,23 @@ module Control.Visitor.Parallel.BackEnd.Network -- {{{
     , NetworkControllerMonad(..)
     , NetworkMonad
     , NetworkRequestQueueMonad(..)
+    , WrappedPortID(..)
     , WorkerId(..)
+    , driver
+    , driverNetwork
+    , getConfiguration
     , runNetwork
     , runSupervisor
     , runSupervisorWithStartingProgress
+    , runVisitor
+    , runVisitorIO
+    , runVisitorT
     , runWorkerWithVisitor
     , runWorkerWithVisitorIO
     , runWorkerWithVisitorT
+    , runWorkerUsingHandleWithVisitor
+    , runWorkerUsingHandleWithVisitorIO
+    , runWorkerUsingHandleWithVisitorT
     , showPortID
     ) where -- }}}
 
@@ -66,14 +76,14 @@ import System.Log.Logger.TH
 
 import Text.PrettyPrint (text)
 
-import Control.Visitor
+import Control.Visitor hiding (runVisitor,runVisitorT)
 import Control.Visitor.Checkpoint
 import Control.Visitor.Parallel.Common.Message
 import qualified Control.Visitor.Parallel.Common.Process as Process
 import qualified Control.Visitor.Parallel.Common.Supervisor as Supervisor
 import Control.Visitor.Parallel.Common.Supervisor hiding (runSupervisor)
 import Control.Visitor.Parallel.Common.Supervisor.RequestQueue
-import Control.Visitor.Parallel.Common.Worker
+import Control.Visitor.Parallel.Common.Worker hiding (runVisitor,runVisitorIO,runVisitorT)
 import Control.Visitor.Parallel.Main
 import Control.Visitor.Utils.Handle
 import Control.Visitor.Workload
@@ -205,12 +215,12 @@ supervisorConfigurationTermFor shared_configuration_term supervisor_configuratio
         <*> supervisor_configuration_term
         <*> (required
              $
-             pos 0
-                Nothing
-                posInfo
-                  { posName = "PORT"
-                  , posDoc = "port on which to listen for workers"
+             opt Nothing
+                ((optInfo ["p","port"])
+                  { optName = "PORT"
+                  , optDoc = "port on which to listen for workers"
                   }
+                )
             )
 -- }}}
 worker_configuration_term = -- {{{

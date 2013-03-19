@@ -40,6 +40,23 @@ Library
     Exposed-modules:
         Control.Visitor.Parallel.BackEnd.Network
 
+Flag examples
+    Description: Enable building the example executables.
+    Default:     False
+
+Executable count-all-nqueens-solutions
+    Main-is: count-all-nqueens-solutions.hs
+    Hs-source-dirs: examples
+    Build-depends:
+        Visitor-network,
+        Visitor == 1.0.*,
+        base > 4 && < 5,
+        cmdtheline == 0.2.*
+    if flag(examples)
+        Buildable: True
+    else
+        Buildable: False
+
 Test-Suite tests
     Type: exitcode-stdio-1.0
     Main-is: tests.hs
