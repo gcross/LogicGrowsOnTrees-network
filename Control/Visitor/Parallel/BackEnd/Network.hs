@@ -1,5 +1,7 @@
 -- Language extensions {{{
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE Rank2Types #-}
@@ -29,7 +31,7 @@ module Control.Visitor.Parallel.BackEnd.Network -- {{{
 -- Imports {{{
 import Prelude hiding (catch)
 
-import Control.Applicative (Applicative)
+import Control.Applicative (Applicative(..),liftA2)
 import Control.Concurrent (ThreadId,forkIO,killThread,myThreadId,throwTo)
 import Control.Exception (AsyncException(..),SomeException,bracket,catch,fromException)
 import Control.Lens (use)
@@ -42,7 +44,7 @@ import Control.Monad.State.Class (MonadState(..))
 import Control.Monad.Trans.Reader (ask,runReaderT)
 import Control.Monad.Trans.State.Strict (StateT,evalStateT)
 
-import Data.Composition ((.*))
+import Data.Composition ((.*),(.********))
 import Data.Functor ((<$>))
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -55,12 +57,14 @@ import Data.Typeable (Typeable)
 
 import Network (HostName,PortID(..),PortNumber,accept,connectTo,listenOn,sClose,withSocketsDo)
 
+import System.Console.CmdTheLine
+import System.Environment (getArgs)
 import System.IO (Handle)
 import qualified System.Log.Logger as Logger
 import System.Log.Logger (Priority(DEBUG,INFO))
 import System.Log.Logger.TH
 
-import Text.Printf
+import Text.PrettyPrint (text)
 
 import Control.Visitor
 import Control.Visitor.Checkpoint
@@ -80,6 +84,22 @@ deriveLoggers "Logger" [DEBUG,INFO]
 -- }}}
 
 -- Types {{{
+
+-- Configuration {{{
+newtype WrappedPortID = WrappedPortID { unwrapPortID :: PortID }
+
+data NetworkConfiguration shared_configuration supervisor_configuration = -- {{{
+    SupervisorConfiguration
+    {   shared_configuration :: shared_configuration
+    ,   supervisor_configuration :: supervisor_configuration
+    ,   supervisor_port :: WrappedPortID
+    }
+  | WorkerConfiguration
+    {   supervisor_host_name :: HostName
+    ,   supervisor_port :: WrappedPortID
+    }
+-- }}}
+-- }}}
 
 data Worker = Worker -- {{{
     {   workerHandle :: Handle
@@ -119,7 +139,6 @@ newtype NetworkControllerMonad result α = C -- {{{
     { unwrapC :: RequestQueueReader result WorkerId NetworkStateMonad α
     } deriving (Applicative,Functor,Monad,MonadCatchIO,MonadIO)
 -- }}}
-
 -- }}}
 
 -- Classes {{{
@@ -159,9 +178,129 @@ instance NetworkRequestQueueMonad (NetworkControllerMonad result) where -- {{{
         liftIO . flip send QuitWorker . workerHandle
      )
 -- }}}
+instance ArgVal WrappedPortID where -- {{{
+    converter = (parsePortID,prettyPortID)
+      where
+        (parseInt,prettyInt) = converter
+        parsePortID =
+            either Left (\n →
+                if n >= 0 && n <= (65535 :: Int)
+                    then Right . WrappedPortID . PortNumber . fromIntegral $ n
+                    else Left . text $ "bad port number: must be between 0 and 65535, inclusive (was given " ++ show n ++ ")"
+            )
+            .
+            parseInt
+        prettyPortID (WrappedPortID (PortNumber port_number)) = prettyInt . fromIntegral $ port_number
+        prettyPortID _ = error "a non-numeric port ID somehow made its way in to the configuration"
+instance ArgVal (Maybe WrappedPortID) where
+    converter = just
+-- }}}
+-- }}}
+
+-- Values {{{
+-- Terms {{{
+supervisorConfigurationTermFor shared_configuration_term supervisor_configuration_term = -- {{{
+    SupervisorConfiguration
+        <$> shared_configuration_term
+        <*> supervisor_configuration_term
+        <*> (required
+             $
+             pos 0
+                Nothing
+                posInfo
+                  { posName = "PORT"
+                  , posDoc = "port on which to listen for workers"
+                  }
+            )
+-- }}}
+worker_configuration_term = -- {{{
+    WorkerConfiguration
+        <$> (required
+             $
+             pos 0
+                Nothing
+                posInfo
+                  { posName = "HOST_NAME"
+                  , posDoc = "supervisor host name"
+                  }
+            )
+        <*> (required
+             $
+             pos 1
+                Nothing
+                posInfo
+                  { posName = "HOST_PORT"
+                  , posDoc = "supervisor host port"
+                  }
+            )
+-- }}}
+no_configuration_term = ret (pure $ helpFail Plain Nothing)
+-- }}}
+
+default_network_callbacks = NetworkCallbacks -- {{{
+    {   notifyConnected = const (return True)
+    ,   notifyDisconnected = const (return ())
+    }
+-- }}}
+-- }}}
+
+-- Drivers {{{
+driver :: ∀ shared_configuration supervisor_configuration visitor result. -- {{{
+    Serialize shared_configuration ⇒
+    Driver
+        IO
+        shared_configuration
+        supervisor_configuration
+        visitor
+        result
+driver = case (driverNetwork :: Driver Network shared_configuration supervisor_configuration visitor result) of { Driver runDriver → Driver (runNetwork .******** runDriver) }
+-- }}}
+
+driverNetwork :: Serialize shared_configuration ⇒ Driver Network shared_configuration supervisor_configuration visitor result -- {{{
+driverNetwork = Driver $
+    \forkVisitorWorkerThread
+     shared_configuration_term
+     supervisor_configuration_term
+     term_info
+     initializeGlobalState
+     constructVisitor
+     getStartingProgress
+     notifyTerminated
+     constructManager →
+    genericRunVisitor
+         forkVisitorWorkerThread
+        (getConfiguration shared_configuration_term supervisor_configuration_term term_info)
+         initializeGlobalState
+         constructVisitor
+         getStartingProgress
+         constructManager
+    >>=
+    maybe (return ()) (liftIO . (notifyTerminated <$> fst . fst <*> snd . fst <*> snd))
+-- }}}
 -- }}}
 
 -- Exposed Functions {{{
+getConfiguration :: -- {{{
+    Term shared_configuration →
+    Term supervisor_configuration →
+    TermInfo →
+    IO (NetworkConfiguration shared_configuration supervisor_configuration)
+getConfiguration shared_configuration_term supervisor_configuration_term term_info =
+    execChoice
+        (no_configuration_term,term_info)
+       [(supervisorConfigurationTermFor shared_configuration_term supervisor_configuration_term,defTI
+          { termName = "supervisor"
+          , termDoc  = "Run the program in supervisor mode, waiting for network connections from workers on the specified port."
+          }
+        )
+       ,(worker_configuration_term,defTI
+          { termName = "worker"
+          , termDoc  = "Run the program in worker mode, connecting to the specified supervisor to receive workloads."
+          }
+        )
+       ]
+-- }}}
+
 runNetwork :: Network α → IO α -- {{{
 runNetwork = withSocketsDo . unsafeRunNetwork
 -- }}}
@@ -288,6 +427,61 @@ runSupervisorWithStartingProgress initializeWorker NetworkCallbacks{..} port_id 
         return $ extractRunOutcomeFromSupervisorOutcome supervisor_outcome
 -- }}}
 
+runVisitor :: -- {{{
+    (Serialize shared_configuration, Monoid result, Serialize result) ⇒
+    IO (NetworkConfiguration shared_configuration supervisor_configuration) →
+    (shared_configuration → IO ()) →
+    (shared_configuration → Visitor result) →
+    (shared_configuration → supervisor_configuration → IO (Progress result)) →
+    (shared_configuration → supervisor_configuration → NetworkControllerMonad result ()) →
+    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcome result))
+runVisitor getConfiguration initializeGlobalState constructVisitor getStartingProgress constructManager =
+    genericRunVisitor
+        forkVisitorWorkerThread
+        getConfiguration
+        initializeGlobalState
+        constructVisitor
+        getStartingProgress
+        constructManager
+-- }}}
+
+runVisitorIO :: -- {{{
+    (Serialize shared_configuration, Monoid result, Serialize result) ⇒
+    IO (NetworkConfiguration shared_configuration supervisor_configuration) →
+    (shared_configuration → IO ()) →
+    (shared_configuration → VisitorIO result) →
+    (shared_configuration → supervisor_configuration → IO (Progress result)) →
+    (shared_configuration → supervisor_configuration → NetworkControllerMonad result ()) →
+    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcome result))
+runVisitorIO getConfiguration initializeGlobalState constructVisitor getStartingProgress constructManager =
+    genericRunVisitor
+        forkVisitorIOWorkerThread
+        getConfiguration
+        initializeGlobalState
+        constructVisitor
+        getStartingProgress
+        constructManager
+-- }}}
+
+runVisitorT :: -- {{{
+    (Serialize shared_configuration, Monoid result, Serialize result, Functor m, MonadIO m) ⇒
+    (∀ α. m α → IO α) →
+    IO (NetworkConfiguration shared_configuration supervisor_configuration) →
+    (shared_configuration → IO ()) →
+    (shared_configuration → VisitorT m result) →
+    (shared_configuration → supervisor_configuration → IO (Progress result)) →
+    (shared_configuration → supervisor_configuration → NetworkControllerMonad result ()) →
+    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcome result))
+runVisitorT runInBase getConfiguration initializeGlobalState constructVisitor getStartingProgress constructManager =
+    genericRunVisitor
+        (forkVisitorTWorkerThread runInBase)
+        getConfiguration
+        initializeGlobalState
+        constructVisitor
+        getStartingProgress
+        constructManager
+-- }}}
+
 runWorkerWithVisitor :: -- {{{
     (Monoid result, Serialize result) ⇒
     Visitor result →
@@ -341,7 +535,6 @@ runWorkerUsingHandleWithVisitorT :: -- {{{
 runWorkerUsingHandleWithVisitorT runInIO = genericRunWorkerUsingHandle . flip (forkVisitorTWorkerThread runInIO)
 -- }}}
 
-
 showPortID :: PortID → String -- {{{
 showPortID (Service service_name) = "Service " ++ service_name
 showPortID (PortNumber port_number) = "Port Number " ++ show port_number
@@ -351,6 +544,41 @@ showPortID (UnixSocket unix_socket_name) = "Unix Socket " ++ unix_socket_name
 
 -- Internal Functions {{{
 fromJustOrBust message = fromMaybe (error message)
+
+genericRunVisitor :: -- {{{
+    (Serialize shared_configuration, Monoid result, Serialize result) ⇒
+    (
+        (WorkerTerminationReason result → IO ()) →
+        visitor result →
+        Workload →
+        IO (WorkerEnvironment result)
+    ) →
+    IO (NetworkConfiguration shared_configuration supervisor_configuration) →
+    (shared_configuration → IO ()) →
+    (shared_configuration → visitor result) →
+    (shared_configuration → supervisor_configuration → IO (Progress result)) →
+    (shared_configuration → supervisor_configuration → NetworkControllerMonad result ()) →
+    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcome result))
+genericRunVisitor forkVisitorWorkerThread getConfiguration initializeGlobalState constructVisitor getStartingProgress constructManager = do
+    configuration ← liftIO $ getConfiguration
+    case configuration of
+        SupervisorConfiguration{..} → do
+            liftIO $ initializeGlobalState shared_configuration
+            starting_progress ← liftIO $ getStartingProgress shared_configuration supervisor_configuration
+            termination_result ←
+                runSupervisorWithStartingProgress
+                    (flip send shared_configuration)
+                    default_network_callbacks
+                    (unwrapPortID supervisor_port)
+                    starting_progress
+                    (constructManager shared_configuration supervisor_configuration)
+            return $ Just ((shared_configuration,supervisor_configuration),termination_result)
+        WorkerConfiguration{..} → do
+            handle ← liftIO $ connectTo supervisor_host_name (unwrapPortID supervisor_port)
+            shared_configuration ← liftIO $ receive handle
+            genericRunWorkerUsingHandle (flip forkVisitorWorkerThread . constructVisitor $ shared_configuration) handle
+            return Nothing
+-- }}}
 
 genericRunWorker :: -- {{{
     (Monoid result, Serialize result) ⇒
@@ -380,5 +608,4 @@ genericRunWorkerUsingHandle :: -- {{{
 genericRunWorkerUsingHandle spawnWorker handle = liftIO $
     Process.runWorkerUsingHandles handle handle spawnWorker
 -- }}}
-
 -- }}}
