@@ -37,8 +37,9 @@ Library
         network >= 2.3 && < 2.5,
         pretty >= 1.1.1 && < 1.2,
         transformers == 0.3.*
+    Hs-source-dirs: sources
     Exposed-modules:
-        Control.Visitor.Parallel.BackEnd.Network
+        Visitor.Parallel.BackEnd.Network
 
 Flag examples
     Description: Enable building the example executables.

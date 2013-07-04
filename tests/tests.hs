@@ -16,7 +16,7 @@ import Control.Concurrent.STM (atomically,modifyTVar,newTVarIO,readTVar,writeTVa
 
 import Data.Functor ((<$>))
 import Data.IORef (modifyIORef,newIORef,readIORef,writeIORef)
-import Data.Monoid ((<>))
+import Data.Monoid ((<>),mempty)
 
 import GHC.Conc (unsafeIOToSTM)
 
@@ -31,13 +31,15 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test,Path)
 
-import Control.Visitor
-import Control.Visitor.Checkpoint
-import Control.Visitor.Examples.Queens
-import Control.Visitor.Parallel.BackEnd.Network
-import Control.Visitor.Parallel.Common.Supervisor.RequestQueue
-import Control.Visitor.Parallel.Main
-import Control.Visitor.Utils.WordSum
+import Visitor
+import Visitor.Checkpoint
+import Visitor.Examples.Queens
+import Visitor.Parallel.BackEnd.Network
+import Visitor.Parallel.Common.Supervisor.RequestQueue
+import Visitor.Parallel.Common.VisitorMode
+import Visitor.Parallel.Common.Worker (Purity(Pure))
+import Visitor.Parallel.Main
+import Visitor.Utils.WordSum
 -- }}}
 
 -- Logging Functions {{{
@@ -70,7 +72,7 @@ tests = -- {{{
     ]
   where
     runTest generateNoise = do
-        let visitor = nqueensCount 13
+        let visitor = nqueensCount 15
             port_id = PortNumber 54210
         progresses_ref ← newIORef []
         worker_ids_var ← newTVarIO []
@@ -87,7 +89,9 @@ tests = -- {{{
                          .
                          unsafeRunNetwork
                          $
-                         runWorkerWithVisitor
+                         runWorker
+                            AllMode
+                            Pure
                             visitor
                             "localhost"
                             port_id
@@ -109,19 +113,21 @@ tests = -- {{{
         RunOutcome _ termination_reason ←
             unsafeRunNetwork $
             runSupervisor
+                AllMode
                 (const $ return ())
                 NetworkCallbacks{..}
                 port_id
+                mempty
                 (forever $ requestProgressUpdate >>= (liftIO . modifyIORef progresses_ref . (:)) >> generateNoise changeNumberOfWorkers)
         result ← case termination_reason of
             Aborted _ → error "prematurely aborted"
             Completed result → return result
             Failure message → error message
-        let correct_result = runVisitor visitor
+        let correct_result = visitTree visitor
         result @?= correct_result
         progresses ← remdups <$> readIORef progresses_ref
         replicateM_ 4 $ randomRIO (0,length progresses-1) >>= \i → do
             let Progress checkpoint result = progresses !! i
-            result @=? runVisitorThroughCheckpoint (invertCheckpoint checkpoint) visitor
-            correct_result @=? result <> (runVisitorThroughCheckpoint checkpoint visitor)
+            result @=? visitTreeStartingFromCheckpoint (invertCheckpoint checkpoint) visitor
+            correct_result @=? result <> (visitTreeStartingFromCheckpoint checkpoint visitor)
 -- }}}
