@@ -5,8 +5,11 @@ License-file:        LICENSE
 Author:              Gregory Crosswhite
 Maintainer:          Gregory Crosswhite <gcrosswhite@gmail.com>
 Stability:           Provisional
-Synopsis:            
-Description:         
+Synopsis:            a back-end for the Visitor package that uses multiple processes running in a network
+Description:         This package provides a back-end for the Visitor package
+                     that uses multiple processes running in a network for
+                     parallelism.  See the module documentation for more
+                     details.
 Cabal-version:       >=1.8
 Build-type:          Simple
 Category:	     
