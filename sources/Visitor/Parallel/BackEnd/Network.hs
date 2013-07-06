@@ -42,6 +42,7 @@ module Visitor.Parallel.BackEnd.Network
     , WorkerId(..)
     , WrappedPortID(..)
     -- * Generic runner functions
+    -- $runners
     , runSupervisor
     , runWorker
     , runVisitor
