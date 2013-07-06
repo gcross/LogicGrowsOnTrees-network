@@ -534,7 +534,7 @@ driver =
     case (driverNetwork :: Driver Network shared_configuration supervisor_configuration m n visitor_mode) of
         Driver runDriver → Driver (runNetwork . runDriver)
 
-{-| This is the same as 'driver', but run in the 'Network' monad.  Use this
+{-| This is the same as 'driver', but runs in the 'Network' monad.  Use this
     driver if you want to do other things with the network (such as starting
     another parallel visit) after the run completes.
  -}
