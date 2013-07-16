@@ -91,12 +91,12 @@ import Text.PrettyPrint (text)
 
 import Visitor hiding (runVisitor,runVisitorT)
 import Visitor.Checkpoint
+import Visitor.Parallel.Common.ExplorationMode
 import Visitor.Parallel.Common.Message
 import qualified Visitor.Parallel.Common.Process as Process
 import qualified Visitor.Parallel.Common.Supervisor as Supervisor
 import Visitor.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
 import Visitor.Parallel.Common.Supervisor.RequestQueue
-import Visitor.Parallel.Common.VisitorMode
 import Visitor.Parallel.Common.Worker hiding (runVisitor,runVisitorIO,runVisitorT)
 import Visitor.Parallel.Main
 import Visitor.Utils.Handle
@@ -168,12 +168,12 @@ class RequestQueueMonad m ⇒ NetworkRequestQueueMonad m where
     disconnectWorker :: WorkerId → m ()
 
 {-| This is the monad in which the network controller will run. -}
-newtype NetworkControllerMonad visitor_mode α = C
-    { unwrapC :: RequestQueueReader visitor_mode WorkerId NetworkStateMonad α
+newtype NetworkControllerMonad exploration_mode α = C
+    { unwrapC :: RequestQueueReader exploration_mode WorkerId NetworkStateMonad α
     } deriving (Applicative,Functor,Monad,MonadCatchIO,MonadIO,RequestQueueMonad)
 
-instance HasVisitorMode (NetworkControllerMonad visitor_mode) where
-    type VisitorModeFor (NetworkControllerMonad visitor_mode) = visitor_mode
+instance HasExplorationMode (NetworkControllerMonad exploration_mode) where
+    type ExplorationModeFor (NetworkControllerMonad exploration_mode) = exploration_mode
 
 instance NetworkRequestQueueMonad (NetworkControllerMonad result) where
     disconnectWorker worker_id = C $ ask >>= (enqueueRequest $
@@ -266,19 +266,19 @@ supervisor and worker roles, then use 'runVisitor'.  Otherwise, use
 
 {-| This runs the supervisor, which will listen for connecting workers. -}
 runSupervisor ::
-    ∀ visitor_mode.
-    ( Serialize (ProgressFor visitor_mode)
-    , Serialize (WorkerFinalProgressFor visitor_mode)
+    ∀ exploration_mode.
+    ( Serialize (ProgressFor exploration_mode)
+    , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
-    VisitorMode visitor_mode {-^ the visitor mode -} →
+    ExplorationMode exploration_mode {-^ the exploration mode -} →
     (Handle → IO ()) {-^ an action that writes any information needed by the worker to the given handle -} →
     NetworkCallbacks {-^ callbacks used to signal when a worker has connected or disconnected;  the connect callback has the ability to veto a worker from connecting -} →
     PortID {-^ the port id on which to listen for connections -} →
-    ProgressFor visitor_mode {-^ the initial progress of the run -} →
-    NetworkControllerMonad visitor_mode () {-^ the controller of the supervisor -} →
-    Network (RunOutcomeFor visitor_mode) {-^ the outcome of the run -}
+    ProgressFor exploration_mode {-^ the initial progress of the run -} →
+    NetworkControllerMonad exploration_mode () {-^ the controller of the supervisor -} →
+    Network (RunOutcomeFor exploration_mode) {-^ the outcome of the run -}
 runSupervisor
-    visitor_mode
+    exploration_mode
     initializeWorker
     NetworkCallbacks{..}
     port_id
@@ -352,7 +352,7 @@ runSupervisor
                             initializeWorker workerHandle
                             workerThreadId ← forkIO (
                                 receiveAndProcessMessagesFromWorkerUsingHandle
-                                    (MessageForSupervisorReceivers{..} :: MessageForSupervisorReceivers visitor_mode WorkerId)
+                                    (MessageForSupervisorReceivers{..} :: MessageForSupervisorReceivers exploration_mode WorkerId)
                                     workerHandle
                                     worker_id
                                 `catch`
@@ -380,7 +380,7 @@ runSupervisor
     flip evalStateT (NetworkState mempty mempty) $ do
         supervisor_outcome@SupervisorOutcome{supervisorRemainingWorkers} ←
             runSupervisorStartingFrom
-                visitor_mode
+                exploration_mode
                 starting_progress
                 SupervisorCallbacks{..}
                 (requestQueueProgram (return ()) request_queue)
@@ -401,10 +401,10 @@ runSupervisor
  -}
 runVisitor ::
     ( Serialize shared_configuration
-    , Serialize (ProgressFor visitor_mode)
-    , Serialize (WorkerFinalProgressFor visitor_mode)
+    , Serialize (ProgressFor exploration_mode)
+    , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
-    (shared_configuration → VisitorMode visitor_mode) {-^ construct the visitor mode given the shared configuration -} →
+    (shared_configuration → ExplorationMode exploration_mode) {-^ construct the exploration mode given the shared configuration -} →
     Purity m n {-^ the purity of the tree generator -} →
     IO (NetworkConfiguration shared_configuration supervisor_configuration)
         {-^ an action that gets the configuration information;  this also
@@ -413,16 +413,16 @@ runVisitor ::
             'SupervisorConfiguration' or 'WorkerConfiguration'
          -} →
     (shared_configuration → IO ()) {-^ initialize the global state of the process given the shared configuration (run on both supervisor and worker processes) -} →
-    (shared_configuration → TreeGeneratorT m (ResultFor visitor_mode)) {-^ construct the tree generator from the shared configuration (run only on the worker) -} →
-    (shared_configuration → supervisor_configuration → IO (ProgressFor visitor_mode)) {-^ get the starting progress given the full configuration information (run only on the supervisor) -} →
-    (shared_configuration → supervisor_configuration → NetworkControllerMonad visitor_mode ()) {-^ construct the controller for the supervisor (run only on the supervisor) -} →
-    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcomeFor visitor_mode))
+    (shared_configuration → TreeGeneratorT m (ResultFor exploration_mode)) {-^ construct the tree generator from the shared configuration (run only on the worker) -} →
+    (shared_configuration → supervisor_configuration → IO (ProgressFor exploration_mode)) {-^ get the starting progress given the full configuration information (run only on the supervisor) -} →
+    (shared_configuration → supervisor_configuration → NetworkControllerMonad exploration_mode ()) {-^ construct the controller for the supervisor (run only on the supervisor) -} →
+    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcomeFor exploration_mode))
         {-^ if this process is the supervisor, then returns the outcome of the
             run as well as the configuration information wrapped in 'Just';
             otherwise, if this process is a worker, it returns 'Nothing'
          -}
 runVisitor
-    constructVisitorMode
+    constructExplorationMode
     purity
     getConfiguration
     initializeGlobalState
@@ -437,7 +437,7 @@ runVisitor
             starting_progress ← liftIO $ getStartingProgress shared_configuration supervisor_configuration
             termination_result ←
                 runSupervisor
-                    (constructVisitorMode shared_configuration)
+                    (constructExplorationMode shared_configuration)
                     (flip send shared_configuration)
                     default_network_callbacks
                     (unwrapPortID supervisor_port)
@@ -448,7 +448,7 @@ runVisitor
             handle ← connectTo supervisor_host_name (unwrapPortID supervisor_port)
             shared_configuration ← receive handle
             Process.runWorkerUsingHandles
-                (constructVisitorMode shared_configuration)
+                (constructExplorationMode shared_configuration)
                 purity
                 (constructTreeGenerator shared_configuration)
                 handle
@@ -457,18 +457,18 @@ runVisitor
 
 {-| Runs a worker that connects to the supervisor via. the given address and port i. -}
 runWorker ::
-    ( Serialize (ProgressFor visitor_mode)
-    , Serialize (WorkerFinalProgressFor visitor_mode)
+    ( Serialize (ProgressFor exploration_mode)
+    , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
-    VisitorMode visitor_mode {-^ the mode in to visit the tree -} →
+    ExplorationMode exploration_mode {-^ the mode in to explore the tree -} →
     Purity m n {-^ the purity of the tree generator -} →
-    TreeGeneratorT m (ResultFor visitor_mode) {-^ the tree generator -} →
+    TreeGeneratorT m (ResultFor exploration_mode) {-^ the tree generator -} →
     HostName {-^ the address of the supervisor -} →
     PortID {-^ the port id on which the supervisor is listening -} →
     Network ()
-runWorker visitor_mode purity tree_generator host_name port_id = liftIO $ do
+runWorker exploration_mode purity tree_generator host_name port_id = liftIO $ do
     handle ← connectTo host_name port_id
-    Process.runWorkerUsingHandles visitor_mode purity tree_generator handle handle
+    Process.runWorkerUsingHandles exploration_mode purity tree_generator handle handle
 
 --------------------------------------------------------------------------------
 ------------------------------- Utility funtions -------------------------------
@@ -525,14 +525,14 @@ showPortID (UnixSocket unix_socket_name) = "Unix Socket " ++ unix_socket_name
     address of the supervisor as the second, and the port id as the third.
  -}
 driver ::
-    ∀ shared_configuration supervisor_configuration m n visitor_mode.
+    ∀ shared_configuration supervisor_configuration m n exploration_mode.
     ( Serialize shared_configuration
-    , Serialize (ProgressFor visitor_mode)
-    , Serialize (WorkerFinalProgressFor visitor_mode)
+    , Serialize (ProgressFor exploration_mode)
+    , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
-    Driver IO shared_configuration supervisor_configuration m n visitor_mode
+    Driver IO shared_configuration supervisor_configuration m n exploration_mode
 driver =
-    case (driverNetwork :: Driver Network shared_configuration supervisor_configuration m n visitor_mode) of
+    case (driverNetwork :: Driver Network shared_configuration supervisor_configuration m n exploration_mode) of
         Driver runDriver → Driver (runNetwork . runDriver)
 
 {-| This is the same as 'driver', but runs in the 'Network' monad.  Use this
@@ -540,15 +540,15 @@ driver =
     another parallel visit) after the run completes.
  -}
 driverNetwork ::
-    ∀ shared_configuration supervisor_configuration m n visitor_mode.
+    ∀ shared_configuration supervisor_configuration m n exploration_mode.
     ( Serialize shared_configuration
-    , Serialize (ProgressFor visitor_mode)
-    , Serialize (WorkerFinalProgressFor visitor_mode)
+    , Serialize (ProgressFor exploration_mode)
+    , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
-    Driver Network shared_configuration supervisor_configuration m n visitor_mode
+    Driver Network shared_configuration supervisor_configuration m n exploration_mode
 driverNetwork = Driver $ \DriverParameters{..} → do
     runVisitor
-        constructVisitorMode
+        constructExplorationMode
         purity
         (getConfiguration shared_configuration_term supervisor_configuration_term program_info)
         initializeGlobalState
