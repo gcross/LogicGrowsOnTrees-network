@@ -11,12 +11,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnicodeSyntax #-}
 
-{-| This back-end implements parallelism by allowing multiple workers to connect
-    to a supervisor over the network.  For this back-end, workers are started
+{-| This adapter implements parallelism by allowing multiple workers to connect
+    to a supervisor over the network.  For this adapter, workers are started
     separately from the supervisor, so the number of workers is not set by the
     controller but by the number of workers that connect to supervisor.
  -}
-module Visitor.Parallel.BackEnd.Network
+module Visitor.Parallel.Adapter.Network
     (
     -- * Driver
       driver
@@ -390,7 +390,7 @@ runSupervisor
 
 {-| Visits the given tree using multiple processes to achieve parallelism.
 
-    This function grants access to all of the functionality of this back-end,
+    This function grants access to all of the functionality of this adapter,
     rather than having to go through the more restricted driver interface. The
     signature of this function is very complicated because it is meant to be
     used in both the supervisor and worker.  The configuration information is
@@ -516,7 +516,7 @@ showPortID (UnixSocket unix_socket_name) = "Unix Socket " ++ unix_socket_name
           see declarations out of order.
  -}
 
-{-| This is the driver for the network back-end;  it consists of a supervisor
+{-| This is the driver for the network adapter;  it consists of a supervisor
     that listens for connections and multiple workers that connect to the
     supervisor.  The same process is used for both the supervisor and the
     worker.  To start the supervisor, run the executable with "supervisor" as

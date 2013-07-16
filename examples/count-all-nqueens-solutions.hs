@@ -10,7 +10,7 @@ import Data.Monoid
 import System.Console.CmdTheLine
 import System.Environment
 
-import Visitor.Parallel.BackEnd.Network
+import Visitor.Parallel.Adapter.Network
 import Visitor.Parallel.Main
 import Visitor.Utils.WordSum
 

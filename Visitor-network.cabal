@@ -42,7 +42,7 @@ Library
         transformers == 0.3.*
     Hs-source-dirs: sources
     Exposed-modules:
-        Visitor.Parallel.BackEnd.Network
+        Visitor.Parallel.Adapter.Network
 
 Flag examples
     Description: Enable building the example executables.

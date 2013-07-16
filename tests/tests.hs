@@ -34,7 +34,7 @@ import Test.HUnit hiding (Test,Path)
 import Visitor
 import Visitor.Checkpoint
 import Visitor.Examples.Queens
-import Visitor.Parallel.BackEnd.Network
+import Visitor.Parallel.Adapter.Network
 import Visitor.Parallel.Common.ExplorationMode
 import Visitor.Parallel.Common.Supervisor.RequestQueue
 import Visitor.Parallel.Common.Worker (Purity(Pure))
