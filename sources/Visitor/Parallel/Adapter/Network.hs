@@ -405,7 +405,7 @@ runVisitor ::
     , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
     (shared_configuration → ExplorationMode exploration_mode) {-^ construct the exploration mode given the shared configuration -} →
-    Purity m n {-^ the purity of the tree generator -} →
+    Purity m n {-^ the purity of the tree -} →
     IO (NetworkConfiguration shared_configuration supervisor_configuration)
         {-^ an action that gets the configuration information;  this also
             determines whether we are in supervisor or worker mode based on
@@ -413,7 +413,7 @@ runVisitor ::
             'SupervisorConfiguration' or 'WorkerConfiguration'
          -} →
     (shared_configuration → IO ()) {-^ initialize the global state of the process given the shared configuration (run on both supervisor and worker processes) -} →
-    (shared_configuration → TreeGeneratorT m (ResultFor exploration_mode)) {-^ construct the tree generator from the shared configuration (run only on the worker) -} →
+    (shared_configuration → TreeT m (ResultFor exploration_mode)) {-^ construct the tree from the shared configuration (run only on the worker) -} →
     (shared_configuration → supervisor_configuration → IO (ProgressFor exploration_mode)) {-^ get the starting progress given the full configuration information (run only on the supervisor) -} →
     (shared_configuration → supervisor_configuration → NetworkControllerMonad exploration_mode ()) {-^ construct the controller for the supervisor (run only on the supervisor) -} →
     Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcomeFor exploration_mode))
@@ -426,7 +426,7 @@ runVisitor
     purity
     getConfiguration
     initializeGlobalState
-    constructTreeGenerator
+    constructTree
     getStartingProgress
     constructManager
  = do
@@ -450,7 +450,7 @@ runVisitor
             Process.runWorkerUsingHandles
                 (constructExplorationMode shared_configuration)
                 purity
-                (constructTreeGenerator shared_configuration)
+                (constructTree shared_configuration)
                 handle
                 handle
             return Nothing
@@ -461,14 +461,14 @@ runWorker ::
     , Serialize (WorkerFinalProgressFor exploration_mode)
     ) ⇒
     ExplorationMode exploration_mode {-^ the mode in to explore the tree -} →
-    Purity m n {-^ the purity of the tree generator -} →
-    TreeGeneratorT m (ResultFor exploration_mode) {-^ the tree generator -} →
+    Purity m n {-^ the purity of the tree -} →
+    TreeT m (ResultFor exploration_mode) {-^ the tree -} →
     HostName {-^ the address of the supervisor -} →
     PortID {-^ the port id on which the supervisor is listening -} →
     Network ()
-runWorker exploration_mode purity tree_generator host_name port_id = liftIO $ do
+runWorker exploration_mode purity tree host_name port_id = liftIO $ do
     handle ← connectTo host_name port_id
-    Process.runWorkerUsingHandles exploration_mode purity tree_generator handle handle
+    Process.runWorkerUsingHandles exploration_mode purity tree handle handle
 
 --------------------------------------------------------------------------------
 ------------------------------- Utility funtions -------------------------------
@@ -552,7 +552,7 @@ driverNetwork = Driver $ \DriverParameters{..} → do
         purity
         (getConfiguration shared_configuration_term supervisor_configuration_term program_info)
         initializeGlobalState
-        constructTreeGenerator
+        constructTree
         getStartingProgress
         constructManager
     >>=
