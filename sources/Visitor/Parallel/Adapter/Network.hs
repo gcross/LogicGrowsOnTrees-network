@@ -45,7 +45,7 @@ module Visitor.Parallel.Adapter.Network
     -- $runners
     , runSupervisor
     , runWorker
-    , runVisitor
+    , runExplorer
     -- * Utility functions
     , showPortID
     , getConfiguration
@@ -89,7 +89,7 @@ import System.Log.Logger.TH
 
 import Text.PrettyPrint (text)
 
-import Visitor hiding (runVisitor,runVisitorT)
+import Visitor hiding (runExplorer,runExplorerT)
 import Visitor.Checkpoint
 import Visitor.Parallel.Common.ExplorationMode
 import Visitor.Parallel.Common.Message
@@ -97,7 +97,7 @@ import qualified Visitor.Parallel.Common.Process as Process
 import qualified Visitor.Parallel.Common.Supervisor as Supervisor
 import Visitor.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
 import Visitor.Parallel.Common.Supervisor.RequestQueue
-import Visitor.Parallel.Common.Worker hiding (runVisitor,runVisitorIO,runVisitorT)
+import Visitor.Parallel.Common.Worker hiding (runExplorer,runExplorerIO,runExplorerT)
 import Visitor.Parallel.Main
 import Visitor.Utils.Handle
 import Visitor.Workload
@@ -260,7 +260,7 @@ solve this problem in order to give yourself more control (such as by having
 separate supervisor and worker executables) at the price of more work.
 
 If you want to use a single executable with automated handling of the
-supervisor and worker roles, then use 'runVisitor'.  Otherwise, use
+supervisor and worker roles, then use 'runExplorer'.  Otherwise, use
 'runSupervisor' to run the supervisor loop and on each worker use 'runWorker'.
  -}
 
@@ -399,7 +399,7 @@ runSupervisor
     configuration information that is shared between the supervisor and the
     worker and configuration information that is specific to the supervisor.
  -}
-runVisitor ::
+runExplorer ::
     ( Serialize shared_configuration
     , Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinalProgressFor exploration_mode)
@@ -421,7 +421,7 @@ runVisitor ::
             run as well as the configuration information wrapped in 'Just';
             otherwise, if this process is a worker, it returns 'Nothing'
          -}
-runVisitor
+runExplorer
     constructExplorationMode
     purity
     getConfiguration
@@ -537,7 +537,7 @@ driver =
 
 {-| This is the same as 'driver', but runs in the 'Network' monad.  Use this
     driver if you want to do other things with the network (such as starting
-    another parallel visit) after the run completes.
+    a subseqent parallel exploration) after the run completes.
  -}
 driverNetwork ::
     ∀ shared_configuration supervisor_configuration m n exploration_mode.
@@ -547,7 +547,7 @@ driverNetwork ::
     ) ⇒
     Driver Network shared_configuration supervisor_configuration m n exploration_mode
 driverNetwork = Driver $ \DriverParameters{..} → do
-    runVisitor
+    runExplorer
         constructExplorationMode
         purity
         (getConfiguration shared_configuration_term supervisor_configuration_term program_info)

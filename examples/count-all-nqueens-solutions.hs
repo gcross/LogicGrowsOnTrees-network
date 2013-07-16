@@ -18,7 +18,7 @@ import Visitor.Examples.Queens
 -- }}}
 
 main =
-    mainForVisitTree
+    mainForExploreTree
         driver
         (getBoardSize <$> required (flip (pos 0) (posInfo
             {   posName = "BOARD_SIZE"

@@ -72,7 +72,7 @@ tests = -- {{{
     ]
   where
     runTest generateNoise = do
-        let visitor = nqueensCount 15
+        let tree = nqueensCount 15
             port_id = PortNumber 54210
         progresses_ref ← newIORef []
         worker_ids_var ← newTVarIO []
@@ -92,7 +92,7 @@ tests = -- {{{
                          runWorker
                             AllMode
                             Pure
-                            visitor
+                            tree
                             "localhost"
                             port_id
                     LT → go (old_number_of_workers-new_number_of_workers)
@@ -123,11 +123,11 @@ tests = -- {{{
             Aborted _ → error "prematurely aborted"
             Completed result → return result
             Failure message → error message
-        let correct_result = visitTree visitor
+        let correct_result = exploreTree tree
         result @?= correct_result
         progresses ← remdups <$> readIORef progresses_ref
         replicateM_ 4 $ randomRIO (0,length progresses-1) >>= \i → do
             let Progress checkpoint result = progresses !! i
-            result @=? visitTreeStartingFromCheckpoint (invertCheckpoint checkpoint) visitor
-            correct_result @=? result <> (visitTreeStartingFromCheckpoint checkpoint visitor)
+            result @=? exploreTreeStartingFromCheckpoint (invertCheckpoint checkpoint) tree
+            correct_result @=? result <> (exploreTreeStartingFromCheckpoint checkpoint tree)
 -- }}}
