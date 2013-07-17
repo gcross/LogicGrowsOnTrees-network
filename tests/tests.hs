@@ -31,15 +31,15 @@ import Test.Framework
 import Test.Framework.Providers.HUnit
 import Test.HUnit hiding (Test,Path)
 
-import Visitor
-import Visitor.Checkpoint
-import Visitor.Examples.Queens
-import Visitor.Parallel.Adapter.Network
-import Visitor.Parallel.Common.ExplorationMode
-import Visitor.Parallel.Common.Supervisor.RequestQueue
-import Visitor.Parallel.Common.Worker (Purity(Pure))
-import Visitor.Parallel.Main
-import Visitor.Utils.WordSum
+import LogicGrowsOnTrees
+import LogicGrowsOnTrees.Checkpoint
+import LogicGrowsOnTrees.Examples.Queens
+import LogicGrowsOnTrees.Parallel.Adapter.Network
+import LogicGrowsOnTrees.Parallel.Common.ExplorationMode
+import LogicGrowsOnTrees.Parallel.Common.Supervisor.RequestQueue
+import LogicGrowsOnTrees.Parallel.Common.Worker (Purity(Pure))
+import LogicGrowsOnTrees.Parallel.Main
+import LogicGrowsOnTrees.Utils.WordSum
 -- }}}
 
 -- Logging Functions {{{

@@ -16,7 +16,7 @@
     separately from the supervisor, so the number of workers is not set by the
     controller but by the number of workers that connect to supervisor.
  -}
-module Visitor.Parallel.Adapter.Network
+module LogicGrowsOnTrees.Parallel.Adapter.Network
     (
     -- * Driver
       driver
@@ -89,18 +89,18 @@ import System.Log.Logger.TH
 
 import Text.PrettyPrint (text)
 
-import Visitor hiding (runExplorer,runExplorerT)
-import Visitor.Checkpoint
-import Visitor.Parallel.Common.ExplorationMode
-import Visitor.Parallel.Common.Message
-import qualified Visitor.Parallel.Common.Process as Process
-import qualified Visitor.Parallel.Common.Supervisor as Supervisor
-import Visitor.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
-import Visitor.Parallel.Common.Supervisor.RequestQueue
-import Visitor.Parallel.Common.Worker hiding (runExplorer,runExplorerIO,runExplorerT)
-import Visitor.Parallel.Main
-import Visitor.Utils.Handle
-import Visitor.Workload
+import LogicGrowsOnTrees hiding (runExplorer,runExplorerT)
+import LogicGrowsOnTrees.Checkpoint
+import LogicGrowsOnTrees.Parallel.Common.ExplorationMode
+import LogicGrowsOnTrees.Parallel.Common.Message
+import qualified LogicGrowsOnTrees.Parallel.Common.Process as Process
+import qualified LogicGrowsOnTrees.Parallel.Common.Supervisor as Supervisor
+import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
+import LogicGrowsOnTrees.Parallel.Common.Supervisor.RequestQueue
+import LogicGrowsOnTrees.Parallel.Common.Worker hiding (runExplorer,runExplorerIO,runExplorerT)
+import LogicGrowsOnTrees.Parallel.Main
+import LogicGrowsOnTrees.Utils.Handle
+import LogicGrowsOnTrees.Workload
 
 --------------------------------------------------------------------------------
 ----------------------------------- Loggers ------------------------------------
@@ -388,7 +388,7 @@ runSupervisor
         liftIO $ killThread acceptor_thread_id
         return $ extractRunOutcomeFromSupervisorOutcome supervisor_outcome
 
-{-| Visits the given tree using multiple processes to achieve parallelism.
+{-| Explores the given tree using multiple processes to achieve parallelism.
 
     This function grants access to all of the functionality of this adapter,
     rather than having to go through the more restricted driver interface. The

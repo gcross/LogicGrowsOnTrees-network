@@ -10,11 +10,11 @@ import Data.Monoid
 import System.Console.CmdTheLine
 import System.Environment
 
-import Visitor.Parallel.Adapter.Network
-import Visitor.Parallel.Main
-import Visitor.Utils.WordSum
+import LogicGrowsOnTrees.Parallel.Adapter.Network
+import LogicGrowsOnTrees.Parallel.Main
+import LogicGrowsOnTrees.Utils.WordSum
 
-import Visitor.Examples.Queens
+import LogicGrowsOnTrees.Examples.Queens
 -- }}}
 
 main =

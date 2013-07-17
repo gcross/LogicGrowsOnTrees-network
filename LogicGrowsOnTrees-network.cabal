@@ -1,12 +1,12 @@
-Name:                Visitor-network
+Name:                LogicGrowsOnTrees-network
 Version:             1.0
 License:             BSD3
 License-file:        LICENSE
 Author:              Gregory Crosswhite
 Maintainer:          Gregory Crosswhite <gcrosswhite@gmail.com>
 Stability:           Provisional
-Synopsis:            a back-end for the Visitor package that uses multiple processes running in a network
-Description:         This package provides a back-end for the Visitor package
+Synopsis:            a adapter for the LogicGrowsOnTrees package that uses multiple processes running in a network
+Description:         This package provides a adapter for the LogicGrowsOnTrees package
                      that uses multiple processes running in a network for
                      parallelism.  See the module documentation for more
                      details.
@@ -16,17 +16,17 @@ Category:
 
 Source-Repository head
   Type:                git
-  Location:            git://github.com/gcross/Visitor-network.git
+  Location:            git://github.com/gcross/LogicGrowsOnTrees-network.git
 
 Source-Repository this
     Type:                git
-    Location:            git://github.com/gcross/Visitor-network.git
+    Location:            git://github.com/gcross/LogicGrowsOnTrees-network.git
 --    Tag:                 
 
 
 Library
     Build-depends:
-        Visitor == 1.0.*,
+        LogicGrowsOnTrees == 1.0.*,
         base > 4 && < 5,
         cereal >= 0.3.5 && < 0.3.6,
         cmdtheline >= 0.2.2 && < 0.3,
@@ -42,7 +42,7 @@ Library
         transformers == 0.3.*
     Hs-source-dirs: sources
     Exposed-modules:
-        Visitor.Parallel.Adapter.Network
+        LogicGrowsOnTrees.Parallel.Adapter.Network
 
 Flag examples
     Description: Enable building the example executables.
@@ -52,8 +52,8 @@ Executable count-all-nqueens-solutions
     Main-is: count-all-nqueens-solutions.hs
     Hs-source-dirs: examples
     Build-depends:
-        Visitor-network,
-        Visitor == 1.0.*,
+        LogicGrowsOnTrees-network,
+        LogicGrowsOnTrees == 1.0.*,
         base > 4 && < 5,
         cmdtheline == 0.2.*
     if flag(examples)
@@ -66,8 +66,8 @@ Test-Suite tests
     Main-is: tests.hs
     Hs-source-dirs: tests
     Build-depends:
-        Visitor-network,
-        Visitor == 1.0.*,
+        LogicGrowsOnTrees-network,
+        LogicGrowsOnTrees == 1.0.*,
         base > 4 && < 5,
         hslogger == 1.2.*,
         hslogger-template == 2.0.*,
