@@ -94,6 +94,7 @@ import LogicGrowsOnTrees.Checkpoint
 import LogicGrowsOnTrees.Parallel.Common.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Common.Message
 import qualified LogicGrowsOnTrees.Parallel.Common.Process as Process
+import LogicGrowsOnTrees.Parallel.Common.Purity
 import qualified LogicGrowsOnTrees.Parallel.Common.Supervisor as Supervisor
 import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
 import LogicGrowsOnTrees.Parallel.Common.Supervisor.RequestQueue
