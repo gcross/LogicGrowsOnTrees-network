@@ -35,7 +35,11 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     , getNumberOfWorkersAsync
     , requestProgressUpdate
     , requestProgressUpdateAsync
-    -- * Other Types
+    -- * Outcome types
+    , RunOutcome(..)
+    , RunStatistics(..)
+    , TerminationReason(..)
+    -- * Miscellaneous types
     , NetworkCallbacks(..)
     , default_network_callbacks
     , NetworkConfiguration(..)
