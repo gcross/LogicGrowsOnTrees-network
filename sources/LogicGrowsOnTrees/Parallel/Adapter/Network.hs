@@ -93,7 +93,7 @@ import System.Log.Logger.TH
 
 import Text.PrettyPrint (text)
 
-import LogicGrowsOnTrees hiding (runExplorer,runExplorerT)
+import LogicGrowsOnTrees
 import LogicGrowsOnTrees.Checkpoint
 import LogicGrowsOnTrees.Parallel.Common.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Common.Message
@@ -102,7 +102,7 @@ import LogicGrowsOnTrees.Parallel.Common.Purity
 import qualified LogicGrowsOnTrees.Parallel.Common.Supervisor as Supervisor
 import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
 import LogicGrowsOnTrees.Parallel.Common.Supervisor.RequestQueue
-import LogicGrowsOnTrees.Parallel.Common.Worker hiding (runExplorer,runExplorerIO,runExplorerT)
+import LogicGrowsOnTrees.Parallel.Common.Worker
 import LogicGrowsOnTrees.Parallel.Main
 import LogicGrowsOnTrees.Utils.Handle
 import LogicGrowsOnTrees.Workload
