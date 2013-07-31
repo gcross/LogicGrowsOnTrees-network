@@ -11,7 +11,7 @@
 import Control.Monad (forever,replicateM_,void)
 import Control.Monad.IO.Class (MonadIO(..))
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO,threadDelay)
 import Control.Concurrent.STM (atomically,modifyTVar,newTVarIO,readTVar,writeTVar)
 
 import Data.Functor ((<$>))
@@ -118,7 +118,7 @@ tests = -- {{{
                 NetworkCallbacks{..}
                 port_id
                 mempty
-                (forever $ requestProgressUpdate >>= (liftIO . modifyIORef progresses_ref . (:)) >> generateNoise changeNumberOfWorkers)
+                (forever $ liftIO (threadDelay 1000) >> requestProgressUpdate >>= (liftIO . modifyIORef progresses_ref . (:)) >> generateNoise changeNumberOfWorkers)
         result ← case termination_reason of
             Aborted _ → error "prematurely aborted"
             Completed result → return result
