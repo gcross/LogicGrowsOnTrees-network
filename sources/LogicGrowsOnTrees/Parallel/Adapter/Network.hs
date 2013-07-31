@@ -381,7 +381,7 @@ runSupervisor
             Just ThreadKilled → return ()
             _ → throwTo supervisor_thread_id e
         )
-    manager_thread_id ← forkIO $ runReaderT controller request_queue
+    forkControllerThread request_queue controller
     flip evalStateT (NetworkState mempty mempty) $ do
         supervisor_outcome@SupervisorOutcome{supervisorRemainingWorkers} ←
             runSupervisorStartingFrom
@@ -391,6 +391,7 @@ runSupervisor
                 (requestQueueProgram (return ()) request_queue)
         broadcastMessageToWorkers QuitWorker supervisorRemainingWorkers
         liftIO $ killThread acceptor_thread_id
+        killControllerThreads request_queue
         return $ extractRunOutcomeFromSupervisorOutcome supervisor_outcome
 
 {-| Explores the given tree using multiple processes to achieve parallelism.
