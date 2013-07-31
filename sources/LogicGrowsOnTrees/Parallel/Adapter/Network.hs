@@ -95,15 +95,15 @@ import Text.PrettyPrint (text)
 
 import LogicGrowsOnTrees
 import LogicGrowsOnTrees.Checkpoint
-import LogicGrowsOnTrees.Parallel.Common.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Common.Message
 import qualified LogicGrowsOnTrees.Parallel.Common.Process as Process
-import LogicGrowsOnTrees.Parallel.Common.Purity
 import qualified LogicGrowsOnTrees.Parallel.Common.Supervisor as Supervisor
 import LogicGrowsOnTrees.Parallel.Common.RequestQueue
 import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
 import LogicGrowsOnTrees.Parallel.Common.Worker
+import LogicGrowsOnTrees.Parallel.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Main
+import LogicGrowsOnTrees.Parallel.Purity
 import LogicGrowsOnTrees.Utils.Handle
 import LogicGrowsOnTrees.Workload
 
