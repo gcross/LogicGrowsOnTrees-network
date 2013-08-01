@@ -475,6 +475,7 @@ runWorker ::
 runWorker exploration_mode purity tree host_name port_id = liftIO $ do
     handle ← connectTo host_name port_id
     Process.runWorkerUsingHandles exploration_mode purity tree handle handle
+        `catch` (\ConnectionLost → return ())
 
 --------------------------------------------------------------------------------
 ------------------------------- Utility funtions -------------------------------
