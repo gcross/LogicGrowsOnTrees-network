@@ -434,7 +434,7 @@ runExplorer
     initializeGlobalState
     constructTree
     getStartingProgress
-    constructManager
+    constructController
  = do
     configuration ← liftIO $ getConfiguration
     case configuration of
@@ -448,7 +448,7 @@ runExplorer
                     default_network_callbacks
                     (unwrapPortID supervisor_port)
                     starting_progress
-                    (constructManager shared_configuration supervisor_configuration)
+                    (constructController shared_configuration supervisor_configuration)
             return $ Just ((shared_configuration,supervisor_configuration),termination_result)
         WorkerConfiguration{..} → liftIO $ do
             handle ← connectTo supervisor_host_name (unwrapPortID supervisor_port)
@@ -560,7 +560,7 @@ driverNetwork = Driver $ \DriverParameters{..} → do
         initializeGlobalState
         constructTree
         getStartingProgress
-        constructManager
+        constructController
     >>=
     maybe (return ()) (liftIO . (notifyTerminated <$> fst . fst <*> snd . fst <*> snd))
 
