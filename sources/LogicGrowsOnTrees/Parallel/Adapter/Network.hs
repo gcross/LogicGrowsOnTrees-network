@@ -35,6 +35,7 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     , getNumberOfWorkersAsync
     , requestProgressUpdate
     , requestProgressUpdateAsync
+    , setWorkloadBufferSize
     -- * Outcome types
     , RunOutcome(..)
     , RunStatistics(..)
@@ -99,7 +100,7 @@ import LogicGrowsOnTrees.Parallel.Common.Message
 import qualified LogicGrowsOnTrees.Parallel.Common.Process as Process
 import qualified LogicGrowsOnTrees.Parallel.Common.Supervisor as Supervisor
 import LogicGrowsOnTrees.Parallel.Common.RequestQueue
-import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers)
+import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers,setWorkloadBufferSize)
 import LogicGrowsOnTrees.Parallel.Common.Worker
 import LogicGrowsOnTrees.Parallel.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Main
