@@ -54,7 +54,6 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     -- * Utility functions
     , showPortID
     , getConfiguration
-
     ) where
 
 import Prelude hiding (catch)
