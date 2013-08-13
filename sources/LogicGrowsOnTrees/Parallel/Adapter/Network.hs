@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -511,7 +512,9 @@ getConfiguration shared_configuration_term supervisor_configuration_term term_in
 showPortID :: PortID → String
 showPortID (Service service_name) = "Service " ++ service_name
 showPortID (PortNumber port_number) = "Port Number " ++ show port_number
+#ifndef mingw32_HOST_OS
 showPortID (UnixSocket unix_socket_name) = "Unix Socket " ++ unix_socket_name
+#endif
 
 --------------------------------------------------------------------------------
 ------------------------------------ Driver ------------------------------------
