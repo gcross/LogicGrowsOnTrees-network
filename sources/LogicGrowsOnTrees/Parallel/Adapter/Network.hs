@@ -30,12 +30,12 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     , NetworkControllerMonad
     , abort
     , fork
-    , getCurrentProgress
     , getCurrentProgressAsync
-    , getNumberOfWorkers
+    , getCurrentProgress
     , getNumberOfWorkersAsync
-    , requestProgressUpdate
+    , getNumberOfWorkers
     , requestProgressUpdateAsync
+    , requestProgressUpdate
     , setWorkloadBufferSize
     -- * Outcome types
     , RunOutcome(..)
