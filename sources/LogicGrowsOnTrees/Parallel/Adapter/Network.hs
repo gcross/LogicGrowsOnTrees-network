@@ -274,7 +274,7 @@ supervisor and worker roles, then use 'runExplorer'.  Otherwise, use
 runSupervisor ::
     ∀ exploration_mode.
     ( Serialize (ProgressFor exploration_mode)
-    , Serialize (WorkerFinalProgressFor exploration_mode)
+    , Serialize (WorkerFinishedProgressFor exploration_mode)
     ) ⇒
     ExplorationMode exploration_mode {-^ the exploration mode -} →
     (Handle → IO ()) {-^ an action that writes any information needed by the worker to the given handle -} →
@@ -409,7 +409,7 @@ runSupervisor
 runExplorer ::
     ( Serialize shared_configuration
     , Serialize (ProgressFor exploration_mode)
-    , Serialize (WorkerFinalProgressFor exploration_mode)
+    , Serialize (WorkerFinishedProgressFor exploration_mode)
     ) ⇒
     (shared_configuration → ExplorationMode exploration_mode) {-^ construct the exploration mode given the shared configuration -} →
     Purity m n {-^ the purity of the tree -} →
@@ -465,7 +465,7 @@ runExplorer
 {-| Runs a worker that connects to the supervisor via. the given address and port i. -}
 runWorker ::
     ( Serialize (ProgressFor exploration_mode)
-    , Serialize (WorkerFinalProgressFor exploration_mode)
+    , Serialize (WorkerFinishedProgressFor exploration_mode)
     ) ⇒
     ExplorationMode exploration_mode {-^ the mode in to explore the tree -} →
     Purity m n {-^ the purity of the tree -} →
@@ -537,7 +537,7 @@ driver ::
     ∀ shared_configuration supervisor_configuration m n exploration_mode.
     ( Serialize shared_configuration
     , Serialize (ProgressFor exploration_mode)
-    , Serialize (WorkerFinalProgressFor exploration_mode)
+    , Serialize (WorkerFinishedProgressFor exploration_mode)
     ) ⇒
     Driver IO shared_configuration supervisor_configuration m n exploration_mode
 driver =
@@ -552,7 +552,7 @@ driverNetwork ::
     ∀ shared_configuration supervisor_configuration m n exploration_mode.
     ( Serialize shared_configuration
     , Serialize (ProgressFor exploration_mode)
-    , Serialize (WorkerFinalProgressFor exploration_mode)
+    , Serialize (WorkerFinishedProgressFor exploration_mode)
     ) ⇒
     Driver Network shared_configuration supervisor_configuration m n exploration_mode
 driverNetwork = Driver $ \DriverParameters{..} → do
