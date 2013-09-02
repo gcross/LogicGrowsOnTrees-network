@@ -127,7 +127,7 @@ deriveLoggers "Logger" [DEBUG,INFO]
 newtype Network α = Network { unsafeRunNetwork :: IO α }
   deriving (Applicative,Functor,Monad,MonadIO)
 
-{-| Initializes the network subsystem where required (primarily on Windows). -}
+{-| Initializes the network subsystem where required (e.g., on Windows). -}
 runNetwork :: Network α → IO α
 runNetwork = withSocketsDo . unsafeRunNetwork
 
@@ -223,12 +223,12 @@ data NetworkConfiguration shared_configuration supervisor_configuration =
     SupervisorConfiguration
     {   shared_configuration :: shared_configuration {-^ configuration information shared between the supervisor and the worker -}
     ,   supervisor_configuration :: supervisor_configuration {-^ configuration information specific to the supervisor -}
-    ,   supervisor_port :: WrappedPortID {-^ the port on which the supervisor should listen -}
+    ,   supervisor_port :: WrappedPortID {-^ - for the supervisor, the port on which to listen -}
     }
     {-| This constructor indicates that the process should be run in worker mode. -}
   | WorkerConfiguration
     {   supervisor_host_name :: HostName {-^ the address of the supervisor to which this worker should connect -}
-    ,   supervisor_port :: WrappedPortID {-^ the port id of the supervisor to which this worker should connect -}
+    ,   supervisor_port :: WrappedPortID {-^ - for the worker, the port to which to connect -}
     }
 
 {-| A newtype wrapper around PortID in order to provide an instance of 'ArgVal'. -}
@@ -261,9 +261,9 @@ In this section the full functionality of this module is exposed in case one
 does not want the restrictions of the driver interface. If you decide to go in
 this direction, then you need to decide whether you want there to be a single
 executable for both the supervisor and worker with the process of determining in
-which mode it should run taken care of for you, or whether you want to manually
-solve this problem in order to give yourself more control (such as by having
-separate supervisor and worker executables) at the price of more work.
+which mode it should run taken care of for you, or whether you want to do this
+yourself in order to give yourself more control (such as by having separate
+supervisor and worker executables) at the price of more work.
 
 If you want to use a single executable with automated handling of the
 supervisor and worker roles, then use 'runExplorer'.  Otherwise, use
@@ -411,22 +411,38 @@ runExplorer ::
     , Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinishedProgressFor exploration_mode)
     ) ⇒
-    (shared_configuration → ExplorationMode exploration_mode) {-^ construct the exploration mode given the shared configuration -} →
+    (shared_configuration → ExplorationMode exploration_mode)
+        {-^ a function that constructs the exploration mode given the shared
+            configuration
+         -} →
     Purity m n {-^ the purity of the tree -} →
     IO (NetworkConfiguration shared_configuration supervisor_configuration)
-        {-^ an action that gets the configuration information;  this also
-            determines whether we are in supervisor or worker mode based on
-            whether the constructor use is respectively
-            'SupervisorConfiguration' or 'WorkerConfiguration'
+        {-^ an action that gets the configuration information (run on both
+            supervisor and worker processes); this also determines whether we
+            are in supervisor or worker mode based on whether the constructor
+            use is respectively 'SupervisorConfiguration' or
+            'WorkerConfiguration'
          -} →
-    (shared_configuration → IO ()) {-^ initialize the global state of the process given the shared configuration (run on both supervisor and worker processes) -} →
-    (shared_configuration → TreeT m (ResultFor exploration_mode)) {-^ construct the tree from the shared configuration (run only on the worker) -} →
-    (shared_configuration → supervisor_configuration → IO (ProgressFor exploration_mode)) {-^ get the starting progress given the full configuration information (run only on the supervisor) -} →
-    (shared_configuration → supervisor_configuration → NetworkControllerMonad exploration_mode ()) {-^ construct the controller for the supervisor (run only on the supervisor) -} →
+    (shared_configuration → IO ())
+        {-^ an action that initializes the global state of the process given the
+            shared configuration (run on both supervisor and worker processes)
+         -} →
+    (shared_configuration → TreeT m (ResultFor exploration_mode))
+        {-^ a function that constructs the tree from the shared configuration
+            (called only on the worker)
+         -} →
+    (shared_configuration → supervisor_configuration → IO (ProgressFor exploration_mode))
+        {-^ an action that gets the starting progress given the full
+            configuration information (run only on the supervisor)
+         -} →
+    (shared_configuration → supervisor_configuration → NetworkControllerMonad exploration_mode ())
+        {-^ a function that constructs the controller for the supervisor (called
+            only on the supervisor)
+         -} →
     Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcomeFor exploration_mode))
-        {-^ if this process is the supervisor, then returns the outcome of the
-            run as well as the configuration information wrapped in 'Just';
-            otherwise, if this process is a worker, it returns 'Nothing'
+        {-^ if this process is the supervisor, then the outcome of the run as
+            well as the configuration information wrapped in 'Just'; otherwise
+            'Nothing'
          -}
 runExplorer
     constructExplorationMode
@@ -462,7 +478,7 @@ runExplorer
                 handle
             return Nothing
 
-{-| Runs a worker that connects to the supervisor via. the given address and port i. -}
+{-| Runs a worker that connects to the supervisor via. the given address and port id. -}
 runWorker ::
     ( Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinishedProgressFor exploration_mode)
@@ -527,11 +543,11 @@ showPortID (UnixSocket unix_socket_name) = "Unix Socket " ++ unix_socket_name
 
 {-| This is the driver for the network adapter;  it consists of a supervisor
     that listens for connections and multiple workers that connect to the
-    supervisor.  The same process is used for both the supervisor and the
-    worker.  To start the supervisor, run the executable with "supervisor" as
-    the first argument and "-p PORTID" to specify the port id.  To start a
-    worker, run the executable with "worker" as the first argument, the
-    address of the supervisor as the second, and the port id as the third.
+    supervisor, where the same executable is used for both the supervisor and
+    the worker. To start the supervisor, run the executable with "supervisor" as
+    the first argument and "-p PORTID" to specify the port id. To start a
+    worker, run the executable with "worker" as the first argument, the address
+    of the supervisor as the second, and the port id as the third.
  -}
 driver ::
     ∀ shared_configuration supervisor_configuration m n exploration_mode.

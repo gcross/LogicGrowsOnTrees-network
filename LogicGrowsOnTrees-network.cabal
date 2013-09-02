@@ -8,7 +8,7 @@ Stability:           Provisional
 Synopsis:            a adapter for the LogicGrowsOnTrees package that uses multiple processes running in a network
 Description:         This package provides a adapter for the LogicGrowsOnTrees package
                      that uses multiple processes running in a network for
-                     parallelism.  See the module documentation for more
+                     parallelism;  see the module documentation for more
                      details.
 Cabal-version:       >=1.8
 Build-type:          Simple
