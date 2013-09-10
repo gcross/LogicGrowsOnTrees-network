@@ -118,7 +118,12 @@ tests = -- {{{
                 NetworkCallbacks{..}
                 port_id
                 mempty
-                (forever $ liftIO (threadDelay 1000) >> requestProgressUpdate >>= (liftIO . modifyIORef progresses_ref . (:)) >> generateNoise changeNumberOfWorkers)
+                (do changeNumberOfWorkers (const 1)
+                    forever $ do
+                        liftIO $ threadDelay 1000
+                        requestProgressUpdate >>= liftIO . modifyIORef progresses_ref . (:)
+                        generateNoise changeNumberOfWorkers
+                )
         result ← case termination_reason of
             Aborted _ → error "prematurely aborted"
             Completed result → return result
