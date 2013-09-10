@@ -65,7 +65,7 @@ import Control.Exception (AsyncException(..),SomeException,bracket,catch,fromExc
 import Control.Lens (use)
 import Control.Lens.Operators ((%=))
 import Control.Lens.TH (makeLenses)
-import Control.Monad (forever)
+import Control.Monad (forever,when)
 import Control.Monad.CatchIO (MonadCatchIO)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.State.Class (MonadState(..))
@@ -152,7 +152,8 @@ data Worker = Worker
     } deriving (Eq,Show)
 
 data NetworkState = NetworkState
-    {   _pending_quit :: !(Set WorkerId)
+    {   _pending_add :: !(Set WorkerId)
+    ,   _pending_quit :: !(Set WorkerId)
     ,   _workers :: !(Map WorkerId Worker)
     }
 makeLenses ''NetworkState
@@ -171,6 +172,10 @@ type NetworkMonad result = SupervisorMonad result WorkerId NetworkStateMonad
     disconnect a worker.
  -}
 class RequestQueueMonad m ⇒ NetworkRequestQueueMonad m where
+    {-| Forcibly disconnects the given worker; calling this function with the
+        `WorkerId` of a worker that is no longer connected to the system is
+        *not* an error; in that case, nothing will happen.
+     -}
     disconnectWorker :: WorkerId → m ()
 
 {-| This is the monad in which the network controller will run. -}
@@ -185,13 +190,10 @@ instance NetworkRequestQueueMonad (NetworkControllerMonad result) where
     disconnectWorker worker_id = C $ ask >>= (enqueueRequest $
         debugM ("Disconnecting worker " ++ show worker_id)
         >>
-        fromJustOrBust ("Unable to find worker " ++ show worker_id ++ " to disconnect.")
-        .
-        Map.lookup worker_id
-        <$>
-        use workers
+        Map.lookup worker_id <$> use workers
         >>=
-        liftIO . flip send QuitWorker . workerHandle
+        maybe (pending_add %= Set.delete worker_id)
+              (liftIO . flip send QuitWorker . workerHandle)
      )
 
 --------------------------------------------------------------------------------
@@ -351,6 +353,7 @@ runSupervisor
                     debugM $ "Received connection from " ++ identifier
                     let worker_id = WorkerId{..}
                         sendToWorker = send workerHandle
+                    flip enqueueRequestAndWait request_queue $ pending_add %= Set.insert worker_id
                     allowed_to_connect ← liftIO $ notifyConnected worker_id
                     if allowed_to_connect
                         then 
@@ -371,8 +374,11 @@ runSupervisor
                                 )
                              )
                             flip enqueueRequest request_queue $ do
-                                workers %= Map.insert worker_id Worker{..}
-                                addWorker worker_id
+                                is_pending_add ← Set.member worker_id <$> use pending_add
+                                when is_pending_add $ do
+                                    pending_add %= Set.delete worker_id
+                                    workers %= Map.insert worker_id Worker{..}
+                                    addWorker worker_id
                         else
                          do debugM $ identifier ++ " is *not* allowed to connect."
                             sendToWorker QuitWorker
@@ -383,7 +389,7 @@ runSupervisor
             _ → throwTo supervisor_thread_id e
         )
     forkControllerThread request_queue controller
-    flip evalStateT (NetworkState mempty mempty) $ do
+    flip evalStateT (NetworkState mempty mempty mempty) $ do
         supervisor_outcome@SupervisorOutcome{supervisorRemainingWorkers} ←
             runSupervisorStartingFrom
                 exploration_mode
