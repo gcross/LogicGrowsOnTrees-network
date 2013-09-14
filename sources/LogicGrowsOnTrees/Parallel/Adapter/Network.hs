@@ -59,7 +59,7 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
 
 import Prelude hiding (catch)
 
-import Control.Applicative (Applicative(..),liftA2)
+import Control.Applicative (Applicative(..))
 import Control.Concurrent (ThreadId,forkIO,killThread,myThreadId,throwTo)
 import Control.Exception (AsyncException(..),SomeException,bracket,catch,fromException)
 import Control.Lens (use)
@@ -68,8 +68,7 @@ import Control.Lens.TH (makeLenses)
 import Control.Monad (forever,when)
 import Control.Monad.CatchIO (MonadCatchIO)
 import Control.Monad.IO.Class (MonadIO(..))
-import Control.Monad.State.Class (MonadState(..))
-import Control.Monad.Trans.Reader (ask,runReaderT)
+import Control.Monad.Trans.Reader (ask)
 import Control.Monad.Trans.State.Strict (StateT,evalStateT)
 
 import Data.Composition ((.*))
@@ -86,7 +85,6 @@ import Data.Typeable (Typeable)
 import Network (HostName,PortID(..),PortNumber,accept,connectTo,listenOn,sClose,withSocketsDo)
 
 import System.Console.CmdTheLine
-import System.Environment (getArgs)
 import System.IO (Handle)
 import qualified System.Log.Logger as Logger
 import System.Log.Logger (Priority(DEBUG,INFO))
@@ -95,18 +93,14 @@ import System.Log.Logger.TH
 import Text.PrettyPrint (text)
 
 import LogicGrowsOnTrees
-import LogicGrowsOnTrees.Checkpoint
 import LogicGrowsOnTrees.Parallel.Common.Message
 import qualified LogicGrowsOnTrees.Parallel.Common.Process as Process
-import qualified LogicGrowsOnTrees.Parallel.Common.Supervisor as Supervisor
 import LogicGrowsOnTrees.Parallel.Common.RequestQueue
 import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers,setWorkloadBufferSize)
-import LogicGrowsOnTrees.Parallel.Common.Worker
 import LogicGrowsOnTrees.Parallel.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Main
 import LogicGrowsOnTrees.Parallel.Purity
 import LogicGrowsOnTrees.Utils.Handle
-import LogicGrowsOnTrees.Workload
 
 --------------------------------------------------------------------------------
 ----------------------------------- Loggers ------------------------------------
@@ -160,10 +154,6 @@ makeLenses ''NetworkState
 
 type NetworkStateMonad = StateT NetworkState IO
 
-type NetworkRequestQueue result = RequestQueue result WorkerId NetworkStateMonad
-
-type NetworkMonad result = SupervisorMonad result WorkerId NetworkStateMonad
-
 --------------------------------------------------------------------------------
 ---------------------------------- Controller ----------------------------------
 --------------------------------------------------------------------------------
@@ -179,9 +169,9 @@ class RequestQueueMonad m ⇒ NetworkRequestQueueMonad m where
     disconnectWorker :: WorkerId → m ()
 
 {-| This is the monad in which the network controller will run. -}
-newtype NetworkControllerMonad exploration_mode α = C
-    { unwrapC :: RequestQueueReader exploration_mode WorkerId NetworkStateMonad α
-    } deriving (Applicative,Functor,Monad,MonadCatchIO,MonadIO,RequestQueueMonad)
+newtype NetworkControllerMonad exploration_mode α =
+  C (RequestQueueReader exploration_mode WorkerId NetworkStateMonad α)
+  deriving (Applicative,Functor,Monad,MonadCatchIO,MonadIO,RequestQueueMonad)
 
 instance HasExplorationMode (NetworkControllerMonad exploration_mode) where
     type ExplorationModeFor (NetworkControllerMonad exploration_mode) = exploration_mode
@@ -212,6 +202,7 @@ data NetworkCallbacks = NetworkCallbacks
     }
 
 {-| A default set of callbacks for when you don't care about being notified of connections and disconnections. -}
+default_network_callbacks :: NetworkCallbacks
 default_network_callbacks = NetworkCallbacks
     {   notifyConnected = const (return True)
     ,   notifyDisconnected = const (return ())
@@ -369,7 +360,7 @@ runSupervisor
                                     Just ThreadKilled → sendToWorker QuitWorker
                                     Just UserInterrupt → sendToWorker QuitWorker
                                     _ → do enqueueRequest (removeWorker worker_id) request_queue
-                                           sendToWorker QuitWorker `catch` (\(e::SomeException) → return ())
+                                           sendToWorker QuitWorker `catch` (\(_::SomeException) → return ())
                                            liftIO $ notifyDisconnected worker_id
                                 )
                              )

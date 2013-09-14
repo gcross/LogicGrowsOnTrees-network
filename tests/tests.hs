@@ -8,19 +8,19 @@
 -- }}}
 
 -- Imports {{{
-import Control.Monad (forever,replicateM_,void)
+import Control.Monad (forever,replicateM_)
 import Control.Monad.IO.Class (MonadIO(..))
 
 import Control.Concurrent (forkIO,threadDelay)
 import Control.Concurrent.STM (atomically,modifyTVar,newTVarIO,readTVar,writeTVar)
 
 import Data.Functor ((<$>))
-import Data.IORef (modifyIORef,newIORef,readIORef,writeIORef)
+import Data.IORef (modifyIORef,newIORef,readIORef)
 import Data.Monoid ((<>),mempty)
 
 import GHC.Conc (unsafeIOToSTM)
 
-import Network (HostName,PortID(..))
+import Network (PortID(..))
 
 import qualified System.Log.Logger as Logger
 import System.Log.Logger (Priority(DEBUG,INFO),rootLoggerName,setLevel,updateGlobalLogger)
@@ -35,11 +35,8 @@ import LogicGrowsOnTrees
 import LogicGrowsOnTrees.Checkpoint
 import LogicGrowsOnTrees.Examples.Queens
 import LogicGrowsOnTrees.Parallel.Adapter.Network
-import LogicGrowsOnTrees.Parallel.Common.RequestQueue
 import LogicGrowsOnTrees.Parallel.ExplorationMode
-import LogicGrowsOnTrees.Parallel.Main
 import LogicGrowsOnTrees.Parallel.Purity (Purity(Pure))
-import LogicGrowsOnTrees.Utils.WordSum
 -- }}}
 
 -- Logging Functions {{{
@@ -62,10 +59,10 @@ main = do
 
 tests = -- {{{
     [testCase "one process" . runTest $ \changeNumberOfWorkers → do
-        changeNumberOfWorkers (\i → 0)
-        changeNumberOfWorkers (\i → 1)
+        changeNumberOfWorkers (const 0)
+        changeNumberOfWorkers (const 1)
     ,testCase "two processes" . runTest $ \changeNumberOfWorkers → do
-        changeNumberOfWorkers (\i → 3-i)
+        changeNumberOfWorkers (3-)
     ,testCase "many processes" . runTest $ \changeNumberOfWorkers → liftIO (randomRIO (0,1::Int)) >>= \i → case i of
         0 → changeNumberOfWorkers (\i → if i > 1 then i-1 else i)
         1 → changeNumberOfWorkers (+1)
@@ -95,17 +92,21 @@ tests = -- {{{
                             tree
                             "localhost"
                             port_id
-                    LT → go (old_number_of_workers-new_number_of_workers)
-                      where
-                        go 0 = return ()
-                        go n =
+                    LT → replicateM_ (old_number_of_workers-new_number_of_workers) $
                             (liftIO . atomically $ do
                                 worker_ids ← readTVar worker_ids_var
                                 let number_of_workers = length worker_ids
-                                index_to_remove ← unsafeIOToSTM $ randomRIO (0,number_of_workers-1)
-                                writeTVar worker_ids_var $ take index_to_remove worker_ids ++ drop (number_of_workers+1) worker_ids
-                                return $ worker_ids !! index_to_remove
-                            ) >>= disconnectWorker
+                                if number_of_workers > 0
+                                    then do
+                                        index_to_remove ← unsafeIOToSTM $ randomRIO (0,number_of_workers-1)
+                                        writeTVar worker_ids_var $ take index_to_remove worker_ids ++ drop (number_of_workers+1) worker_ids
+                                        return . Just $ worker_ids !! index_to_remove
+                                    -- Because there is a delay between when a
+                                    -- disconnect request is made and when it is
+                                    -- processed, sometimes the number of workers
+                                    -- will decrease behind our back.
+                                    else return Nothing
+                            ) >>= maybe (return ()) disconnectWorker
             notifyConnected worker_id = do
                 atomically $ modifyTVar worker_ids_var (worker_id:)
                 return True
