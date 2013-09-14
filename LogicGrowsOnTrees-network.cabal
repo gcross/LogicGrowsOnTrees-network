@@ -1,28 +1,26 @@
 Name:                LogicGrowsOnTrees-network
-Version:             1.0
+Version:             1.0.0
 License:             BSD3
 License-file:        LICENSE
 Author:              Gregory Crosswhite
 Maintainer:          Gregory Crosswhite <gcrosswhite@gmail.com>
-Stability:           Provisional
 Synopsis:            a adapter for the LogicGrowsOnTrees package that uses multiple processes running in a network
-Description:         This package provides a adapter for the LogicGrowsOnTrees package
-                     that uses multiple processes running in a network for
-                     parallelism;  see the module documentation for more
-                     details.
 Cabal-version:       >=1.8
 Build-type:          Simple
-Category:	     
+Category:	         Control, Distributed Computing, Logic, Parallelism
+Description:
+    This package provides a adapter for the LogicGrowsOnTrees package that uses
+    multiple processes running in a network for parallelism; see the module
+    documentation for more details.
 
 Source-Repository head
-  Type:                git
-  Location:            git://github.com/gcross/LogicGrowsOnTrees-network.git
+    Type:     git
+    Location: git://github.com/gcross/LogicGrowsOnTrees-network.git
 
 Source-Repository this
-    Type:                git
-    Location:            git://github.com/gcross/LogicGrowsOnTrees-network.git
---    Tag:                 
-
+    Type:     git
+    Location: git://github.com/gcross/LogicGrowsOnTrees-network.git
+    Tag:      1.0.0
 
 Library
     Build-depends:
@@ -43,6 +41,12 @@ Library
     Hs-source-dirs: sources
     Exposed-modules:
         LogicGrowsOnTrees.Parallel.Adapter.Network
+    if flag(warnings)
+        GHC-Options: -Wall -fno-warn-name-shadowing
+
+Flag warnings
+    Description: Enables most warnings.
+    Default:     False
 
 Flag examples
     Description: Enable building the example executables.
@@ -60,6 +64,8 @@ Executable count-all-nqueens-solutions
         Buildable: True
     else
         Buildable: False
+    if flag(warnings)
+        GHC-Options: -Wall -fno-warn-name-shadowing
 
 Test-Suite tests
     Type: exitcode-stdio-1.0
@@ -78,3 +84,5 @@ Test-Suite tests
         test-framework== 0.8.*,
         test-framework-hunit == 0.3.*,
         transformers == 0.3.*
+    if flag(warnings)
+        GHC-Options: -Wall -fno-warn-name-shadowing
