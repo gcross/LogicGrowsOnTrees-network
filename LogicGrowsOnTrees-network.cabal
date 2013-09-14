@@ -7,11 +7,13 @@ Maintainer:          Gregory Crosswhite <gcrosswhite@gmail.com>
 Synopsis:            a adapter for the LogicGrowsOnTrees package that uses multiple processes running in a network
 Cabal-version:       >=1.8
 Build-type:          Simple
-Category:	         Control, Distributed Computing, Logic, Parallelism
+Category:            Control, Distributed Computing, Logic, Parallelism
 Description:
     This package provides a adapter for the LogicGrowsOnTrees package that uses
     multiple processes running in a network for parallelism; see the module
     documentation for more details.
+
+Bug-reports: https://github.com/gcross/LogicGrowsOnTrees-network/issues
 
 Source-Repository head
     Type:     git
