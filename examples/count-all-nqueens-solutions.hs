@@ -1,21 +1,15 @@
--- Language extensions {{{
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UnicodeSyntax #-}
--- }}}
 
--- Imports {{{
 import Data.Functor
-import Data.Monoid
 
 import System.Console.CmdTheLine
-import System.Environment
 
 import LogicGrowsOnTrees.Parallel.Adapter.Network
 import LogicGrowsOnTrees.Parallel.Main
 import LogicGrowsOnTrees.Utils.WordSum
 
 import LogicGrowsOnTrees.Examples.Queens
--- }}}
 
 main =
     mainForExploreTree
