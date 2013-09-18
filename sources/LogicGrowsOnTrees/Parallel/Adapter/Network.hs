@@ -391,6 +391,7 @@ runSupervisor
         liftIO $ killThread acceptor_thread_id
         killControllerThreads request_queue
         return $ extractRunOutcomeFromSupervisorOutcome supervisor_outcome
+{-# INLINE runSupervisor #-}
 
 {-| Explores the given tree using multiple processes to achieve parallelism.
 
@@ -474,6 +475,7 @@ runExplorer
                 handle
                 handle
             return Nothing
+{-# INLINE runExplorer #-}
 
 {-| Runs a worker that connects to the supervisor via. the given address and port id. -}
 runWorker ::
@@ -489,6 +491,7 @@ runWorker ::
 runWorker exploration_mode purity tree host_name port_id = liftIO $ do
     handle ← connectTo host_name port_id
     Process.runWorkerUsingHandles exploration_mode purity tree handle handle
+{-# INLINE runWorker #-}
 
 --------------------------------------------------------------------------------
 ------------------------------- Utility funtions -------------------------------
@@ -556,6 +559,7 @@ driver ::
 driver =
     case (driverNetwork :: Driver Network shared_configuration supervisor_configuration m n exploration_mode) of
         Driver runDriver → Driver (runNetwork . runDriver)
+{-# INLINE driver #-}
 
 {-| This is the same as 'driver', but runs in the 'Network' monad.  Use this
     driver if you want to do other things with the network (such as starting
@@ -579,6 +583,7 @@ driverNetwork = Driver $ \DriverParameters{..} → do
         constructController
     >>=
     maybe (return ()) (liftIO . (notifyTerminated <$> fst . fst <*> snd . fst <*> snd))
+{-# INLINE driverNetwork #-}
 
 --------------------------------------------------------------------------------
 ----------------------------------- Internal -----------------------------------
