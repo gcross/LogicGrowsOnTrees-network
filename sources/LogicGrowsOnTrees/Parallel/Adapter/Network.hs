@@ -87,7 +87,7 @@ import Network (HostName,PortID(..),PortNumber,accept,connectTo,listenOn,sClose,
 import System.Console.CmdTheLine
 import System.IO (Handle)
 import qualified System.Log.Logger as Logger
-import System.Log.Logger (Priority(DEBUG,INFO))
+import System.Log.Logger (Priority(DEBUG,INFO,NOTICE))
 import System.Log.Logger.TH
 
 import Text.PrettyPrint (text)
@@ -106,7 +106,7 @@ import LogicGrowsOnTrees.Utils.Handle
 ----------------------------------- Loggers ------------------------------------
 --------------------------------------------------------------------------------
 
-deriveLoggers "Logger" [DEBUG,INFO]
+deriveLoggers "Logger" [DEBUG,INFO,NOTICE]
 
 --------------------------------------------------------------------------------
 ----------------------------------- Network ------------------------------------
@@ -302,7 +302,7 @@ runSupervisor
             pending_quit %= Set.delete worker_id
             workers %= Map.delete worker_id
             removeWorkerIfPresent worker_id
-            liftIO $ notifyDisconnected worker_id
+            liftIO $ notifyDisconnected_ worker_id
 
         sendMessageToWorker message worker_id = do
             use workers
@@ -329,6 +329,10 @@ runSupervisor
             infoM $ "Activating worker " ++ show worker_id ++ " with workload " ++ show workload
             sendMessageToWorker (StartWorkload workload) worker_id
 
+        notifyDisconnected_ worker_id@WorkerId{..} = do
+            noticeM $ "Worker " ++ workerHostName ++ ":" ++ show workerPortNumber ++ " has disconnected"
+            notifyDisconnected worker_id
+
     let port_id_description = showPortID port_id
     supervisor_thread_id ← myThreadId
     acceptor_thread_id ← forkIO $
@@ -347,6 +351,7 @@ runSupervisor
                     if allowed_to_connect
                         then 
                          do debugM $ identifier ++ " is allowed to connect."
+                            noticeM $ "Received connection from " ++ identifier
                             initializeWorker workerHandle
                             workerThreadId ← forkIO (
                                 receiveAndProcessMessagesFromWorkerUsingHandle
@@ -359,7 +364,7 @@ runSupervisor
                                     Just UserInterrupt → sendToWorker QuitWorker
                                     _ → do enqueueRequest (removeWorker worker_id) request_queue
                                            sendToWorker QuitWorker `catch` (\(_::SomeException) → return ())
-                                           liftIO $ notifyDisconnected worker_id
+                                           liftIO $ notifyDisconnected_ worker_id
                                 )
                              )
                             flip enqueueRequest request_queue $ do
@@ -370,6 +375,7 @@ runSupervisor
                                     addWorker worker_id
                         else
                          do debugM $ identifier ++ " is *not* allowed to connect."
+                            noticeM $ "Rejected connections from " ++ identifier
                             sendToWorker QuitWorker
             )
         `catch`
