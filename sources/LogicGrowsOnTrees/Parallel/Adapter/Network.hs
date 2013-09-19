@@ -177,13 +177,11 @@ instance HasExplorationMode (NetworkControllerMonad exploration_mode) where
     type ExplorationModeFor (NetworkControllerMonad exploration_mode) = exploration_mode
 
 instance NetworkRequestQueueMonad (NetworkControllerMonad result) where
-    disconnectWorker worker_id = C $ ask >>= (enqueueRequest $
+    disconnectWorker worker_id = C $ ask >>= (enqueueRequest $ do
         debugM ("Disconnecting worker " ++ show worker_id)
-        >>
-        Map.lookup worker_id <$> use workers
-        >>=
-        maybe (pending_add %= Set.delete worker_id)
-              (liftIO . flip send QuitWorker . workerHandle)
+        Map.lookup worker_id <$> use workers >>=
+            maybe (pending_add %= Set.delete worker_id)
+                  (liftIO . flip send QuitWorker . workerHandle)
      )
 
 --------------------------------------------------------------------------------
