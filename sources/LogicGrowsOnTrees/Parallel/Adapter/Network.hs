@@ -32,6 +32,8 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     , fork
     , getCurrentProgressAsync
     , getCurrentProgress
+    , getCurrentStatisticsAsync
+    , getCurrentStatistics
     , getNumberOfWorkersAsync
     , getNumberOfWorkers
     , requestProgressUpdateAsync
@@ -96,7 +98,14 @@ import LogicGrowsOnTrees
 import LogicGrowsOnTrees.Parallel.Common.Message
 import qualified LogicGrowsOnTrees.Parallel.Common.Process as Process
 import LogicGrowsOnTrees.Parallel.Common.RequestQueue
-import LogicGrowsOnTrees.Parallel.Common.Supervisor hiding (runSupervisor,getCurrentProgress,getNumberOfWorkers,setWorkloadBufferSize)
+import LogicGrowsOnTrees.Parallel.Common.Supervisor
+    hiding
+    (runSupervisor
+    ,getCurrentProgress
+    ,getCurrentStatistics
+    ,getNumberOfWorkers
+    ,setWorkloadBufferSize
+    )
 import LogicGrowsOnTrees.Parallel.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Main
 import LogicGrowsOnTrees.Parallel.Purity
