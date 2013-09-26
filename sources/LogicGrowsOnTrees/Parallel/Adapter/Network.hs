@@ -28,9 +28,7 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     -- * Controller
     , NetworkRequestQueueMonad(..)
     , NetworkControllerMonad
-    , WorkerCountWatcher
     , abort
-    , addWorkerCountWatcher
     , fork
     , getCurrentProgressAsync
     , getCurrentProgress
@@ -103,7 +101,6 @@ import LogicGrowsOnTrees.Parallel.Common.RequestQueue
 import LogicGrowsOnTrees.Parallel.Common.Supervisor
     hiding
     (runSupervisor
-    ,addWorkerCountWatcher
     ,getCurrentProgress
     ,getCurrentStatistics
     ,getNumberOfWorkers
