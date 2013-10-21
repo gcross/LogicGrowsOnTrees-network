@@ -525,6 +525,7 @@ getConfiguration shared_configuration_term supervisor_configuration_term term_in
        [(supervisorConfigurationTermFor shared_configuration_term supervisor_configuration_term,defTI
           { termName = "supervisor"
           , termDoc  = "Run the program in supervisor mode, waiting for network connections from workers on the specified port."
+          , man = mainMan
           }
         )
        ,(worker_configuration_term,defTI
