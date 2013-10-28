@@ -1,9 +1,12 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -21,10 +24,9 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     (
     -- * Driver
       driver
-    , driverNetwork
     -- * Network
-    , Network(..)
-    , runNetwork
+    , Network
+    , withNetwork
     -- * Controller
     , NetworkRequestQueueMonad(..)
     , NetworkControllerMonad
@@ -121,18 +123,20 @@ deriveLoggers "Logger" [DEBUG,INFO,NOTICE]
 ----------------------------------- Network ------------------------------------
 --------------------------------------------------------------------------------
 
-{-| This monad exists due to the quirk that on Windows one needs to initialize
-    the network system before using it via. 'withSocketsDo'; to ensure that this
-    happens, all computations that use the network are run in the 'Network'
-    monad which itself is then run using the 'runNetwork' function that is
-    equivalent to calling 'withSocketsDo'.
+data NetworkSecret {- This is *not* meant to be exported. -}
+
+{-| This constraint exists due to the quirk that on Windows one needs to
+    initialize the network system before using it via. 'withSocketsDo'; to
+    ensure that this happens, all computations that use the network have the
+    'Network' constrant and must be run by calling 'withNetwork'.
  -}
-newtype Network α = Network { unsafeRunNetwork :: IO α }
-  deriving (Applicative,Functor,Monad,MonadIO)
+type Network = ?network_secret :: NetworkSecret
 
 {-| Initializes the network subsystem where required (e.g., on Windows). -}
-runNetwork :: Network α → IO α
-runNetwork = withSocketsDo . unsafeRunNetwork
+withNetwork :: (Network ⇒ IO α) → IO α
+withNetwork action =
+    let ?network_secret = error "the network secret is not meant to be used as a value"
+    in withSocketsDo action
 
 --------------------------------------------------------------------------------
 ---------------------------- Mostly internal types -----------------------------
@@ -275,6 +279,7 @@ runSupervisor ::
     ∀ exploration_mode.
     ( Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinishedProgressFor exploration_mode)
+    , Network
     ) ⇒
     ExplorationMode exploration_mode {-^ the exploration mode -} →
     (Handle → IO ()) {-^ an action that writes any information needed by the worker to the given handle -} →
@@ -282,7 +287,7 @@ runSupervisor ::
     PortID {-^ the port id on which to listen for connections -} →
     ProgressFor exploration_mode {-^ the initial progress of the run -} →
     NetworkControllerMonad exploration_mode () {-^ the controller of the supervisor -} →
-    Network (RunOutcomeFor exploration_mode) {-^ the outcome of the run -}
+    IO (RunOutcomeFor exploration_mode) {-^ the outcome of the run -}
 runSupervisor
     exploration_mode
     initializeWorker
@@ -290,7 +295,7 @@ runSupervisor
     port_id
     starting_progress
     (C controller)
- = liftIO $ do
+ = do
     request_queue ← newRequestQueue
 
     let receiveStolenWorkloadFromWorker = flip enqueueRequest request_queue .* receiveStolenWorkload
@@ -421,6 +426,7 @@ runExplorer ::
     ( Serialize shared_configuration
     , Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinishedProgressFor exploration_mode)
+    , Network
     ) ⇒
     (shared_configuration → ExplorationMode exploration_mode)
         {-^ a function that constructs the exploration mode given the shared
@@ -450,7 +456,7 @@ runExplorer ::
         {-^ a function that constructs the controller for the supervisor (called
             only on the supervisor)
          -} →
-    Network (Maybe ((shared_configuration,supervisor_configuration),RunOutcomeFor exploration_mode))
+    IO (Maybe ((shared_configuration,supervisor_configuration),RunOutcomeFor exploration_mode))
         {-^ if this process is the supervisor, then the outcome of the run as
             well as the configuration information wrapped in 'Just'; otherwise
             'Nothing'
@@ -494,13 +500,14 @@ runExplorer
 runWorker ::
     ( Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinishedProgressFor exploration_mode)
+    , Network
     ) ⇒
     ExplorationMode exploration_mode {-^ the mode in to explore the tree -} →
     Purity m n {-^ the purity of the tree -} →
     TreeT m (ResultFor exploration_mode) {-^ the tree -} →
     HostName {-^ the address of the supervisor -} →
     PortID {-^ the port id on which the supervisor is listening -} →
-    Network ()
+    IO ()
 runWorker exploration_mode purity tree host_name port_id = liftIO $ do
     handle ← connectTo host_name port_id
     Process.runWorkerUsingHandles exploration_mode purity tree handle handle
@@ -571,21 +578,23 @@ driver ::
     ) ⇒
     Driver IO shared_configuration supervisor_configuration m n exploration_mode
 driver =
-    case (driverNetwork :: Driver Network shared_configuration supervisor_configuration m n exploration_mode) of
-        Driver runDriver → Driver (runNetwork . runDriver)
+    let ?network_secret = error "the network secret is not meant to be used as a value"
+    in case (driverNetwork :: Driver IO shared_configuration supervisor_configuration m n exploration_mode) of
+           Driver runDriver → Driver runDriver
 {-# INLINE driver #-}
 
-{-| This is the same as 'driver', but runs in the 'Network' monad.  Use this
-    driver if you want to do other things with the network (such as starting
-    a subseqent parallel exploration) after the run completes.
+{-| This is the same as 'driver', but it has the 'Network' constraint. Use this 
+    driver if you want to do other things with the network (such as starting a
+    subseqent parallel exploration) after the run completes.
  -}
 driverNetwork ::
     ∀ shared_configuration supervisor_configuration m n exploration_mode.
     ( Serialize shared_configuration
     , Serialize (ProgressFor exploration_mode)
     , Serialize (WorkerFinishedProgressFor exploration_mode)
+    , Network
     ) ⇒
-    Driver Network shared_configuration supervisor_configuration m n exploration_mode
+    Driver IO shared_configuration supervisor_configuration m n exploration_mode
 driverNetwork = Driver $ \DriverParameters{..} → do
     runExplorer
         constructExplorationMode

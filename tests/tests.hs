@@ -1,4 +1,5 @@
 -- Language extensions {{{
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -53,10 +54,11 @@ remdups (x : xx : xs)
 -- }}}
 -- }}}
 
-main = do
+main = withNetwork $  do
     -- updateGlobalLogger rootLoggerName (setLevel DEBUG)
     defaultMain tests
 
+tests :: Network ⇒ [Test]
 tests = -- {{{
     [testCase "one process" . runTest $ \changeNumberOfWorkers → do
         changeNumberOfWorkers (const 0)
@@ -68,7 +70,7 @@ tests = -- {{{
         1 → changeNumberOfWorkers (+1)
     ]
   where
-    runTest generateNoise = do
+    runTest generateNoise = withNetwork $ do
         let tree = nqueensCount 15
             port_id = PortNumber 54210
         progresses_ref ← newIORef []
@@ -83,8 +85,6 @@ tests = -- {{{
                          replicateM_ (new_number_of_workers-old_number_of_workers)
                          .
                          forkIO
-                         .
-                         unsafeRunNetwork
                          $
                          runWorker
                             AllMode
@@ -112,7 +112,6 @@ tests = -- {{{
                 return True
             notifyDisconnected _ = return ()
         RunOutcome _ termination_reason ←
-            unsafeRunNetwork $
             runSupervisor
                 AllMode
                 (const $ return ())
