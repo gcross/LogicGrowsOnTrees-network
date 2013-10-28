@@ -25,7 +25,7 @@ module LogicGrowsOnTrees.Parallel.Adapter.Network
     -- * Driver
       driver
     -- * Network
-    , Network
+    , Network()
     , withNetwork
     -- * Controller
     , NetworkRequestQueueMonad(..)
@@ -123,7 +123,7 @@ deriveLoggers "Logger" [DEBUG,INFO,NOTICE]
 ----------------------------------- Network ------------------------------------
 --------------------------------------------------------------------------------
 
-data NetworkSecret {- This is *not* meant to be exported. -}
+data NetworkSecret = NetworkSecret {- This is *not* meant to be exported. -}
 
 {-| This constraint exists due to the quirk that on Windows one needs to
     initialize the network system before using it via. 'withSocketsDo'; to
@@ -135,7 +135,7 @@ type Network = ?network_secret :: NetworkSecret
 {-| Initializes the network subsystem where required (e.g., on Windows). -}
 withNetwork :: (Network ⇒ IO α) → IO α
 withNetwork action =
-    let ?network_secret = error "the network secret is not meant to be used as a value"
+    let ?network_secret = NetworkSecret
     in withSocketsDo action
 
 --------------------------------------------------------------------------------
@@ -578,7 +578,7 @@ driver ::
     ) ⇒
     Driver IO shared_configuration supervisor_configuration m n exploration_mode
 driver =
-    let ?network_secret = error "the network secret is not meant to be used as a value"
+    let ?network_secret = NetworkSecret
     in case (driverNetwork :: Driver IO shared_configuration supervisor_configuration m n exploration_mode) of
            Driver runDriver → Driver runDriver
 {-# INLINE driver #-}
