@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -23,8 +22,7 @@ import GHC.Conc (unsafeIOToSTM)
 
 import Network (PortID(..))
 
-import qualified System.Log.Logger as Logger
-import System.Log.Logger (Priority(DEBUG,INFO),rootLoggerName,setLevel,updateGlobalLogger)
+import System.Log.Logger (Priority(DEBUG),rootLoggerName,setLevel,updateGlobalLogger)
 import System.Log.Logger.TH
 import System.Random (randomRIO)
 
@@ -38,10 +36,6 @@ import LogicGrowsOnTrees.Examples.Queens
 import LogicGrowsOnTrees.Parallel.Adapter.Network
 import LogicGrowsOnTrees.Parallel.ExplorationMode
 import LogicGrowsOnTrees.Parallel.Purity (Purity(Pure))
--- }}}
-
--- Logging Functions {{{
-deriveLoggers "Logger" [DEBUG,INFO]
 -- }}}
 
 -- Helper Functions {{{
