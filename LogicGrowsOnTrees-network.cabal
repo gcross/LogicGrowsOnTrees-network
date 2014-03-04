@@ -1,5 +1,5 @@
 Name:                LogicGrowsOnTrees-network
-Version:             1.0.0.1
+Version:             1.0.0.2
 License:             BSD3
 License-file:        LICENSE
 Author:              Gregory Crosswhite
@@ -22,7 +22,7 @@ Source-Repository head
 Source-Repository this
     Type:     git
     Location: git://github.com/gcross/LogicGrowsOnTrees-network.git
-    Tag:      1.0.0.1
+    Tag:      1.0.0.2
 
 Library
     Build-depends:
@@ -34,7 +34,7 @@ Library
         containers >= 0.4 && < 0.6,
         hslogger == 1.2.*,
         hslogger-template == 2.0.*,
-        lens >= 3.8.5 && < 3.11,
+        lens >= 3.8.5 && < 4.1,
         MonadCatchIO-transformers == 0.3.*,
         mtl >= 2.1.2 && < 2.2,
         network >= 2.3 && < 2.5,
