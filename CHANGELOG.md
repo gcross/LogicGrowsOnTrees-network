@@ -1,3 +1,15 @@
+Version 1.0.0.3
+===============
+
+* Made some tweaks so that the tests run on older versions of GHC.
+
+
+Version 1.0.0.2
+===============
+
+* Bumped lens dependency version.
+
+
 Version 1.0.0.1
 ===============
 

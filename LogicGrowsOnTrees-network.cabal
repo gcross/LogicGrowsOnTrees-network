@@ -1,5 +1,5 @@
 Name:                LogicGrowsOnTrees-network
-Version:             1.0.0.2
+Version:             1.0.0.3
 License:             BSD3
 License-file:        LICENSE
 Author:              Gregory Crosswhite
@@ -22,7 +22,7 @@ Source-Repository head
 Source-Repository this
     Type:     git
     Location: git://github.com/gcross/LogicGrowsOnTrees-network.git
-    Tag:      1.0.0.2
+    Tag:      1.0.0.3
 
 Library
     Build-depends:
