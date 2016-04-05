@@ -1,3 +1,9 @@
+Version 1.0.0.4
+===============
+
+* Bumped network and transformers dependency version.
+
+
 Version 1.0.0.3
 ===============
 
